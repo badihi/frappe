@@ -96,11 +96,11 @@ export default class Widget {
 
 	set_title(max_chars) {
 		
-		if (this.chart_doc ){
-			this.label=this.chart_doc.chart_name;
+		if (this.chart_doc ) {
+			this.label = this.chart_doc.chart_name;
 		}
-		else if(this.card_doc){
-			this.name=this.card_doc.label;
+		else if (this.card_doc) {
+			this.name = this.card_doc.label;
 		}
 		
 		let base = this.title || this.label || this.name;
