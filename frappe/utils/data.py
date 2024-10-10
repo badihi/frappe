@@ -428,14 +428,14 @@ def get_quarter_start(dt, as_str: Literal[True] = False, use_custom_calendar: bo
 
 
 def get_quarter_start(dt, as_str: bool = False, use_custom_calendar: bool = False) -> str | datetime.date:
-	date = getdate(dt)
+	dt = getdate(dt)
 	if use_custom_calendar and frappe.defaults.get_defaults().calendar_type == 'jalali':
-		date = jdatetime.date.fromgregorian(date=date)
-	quarter = (date.month - 1) // 3 + 1
+		dt = jdatetime.date.fromgregorian(date=dt)
+	quarter = (dt.month - 1) // 3 + 1
 	if isinstance(dt, jdatetime.date):
-		first_date_of_quarter = jdatetime.date(date.year, ((quarter - 1) * 3) + 1, 1).togregorian()
+		first_date_of_quarter = jdatetime.date(dt.year, ((quarter - 1) * 3) + 1, 1).togregorian()
 	else:
-		first_date_of_quarter = datetime.date(date.year, ((quarter - 1) * 3) + 1, 1)
+		first_date_of_quarter = datetime.date(dt.year, ((quarter - 1) * 3) + 1, 1)
 	return first_date_of_quarter.strftime(DATE_FORMAT) if as_str else first_date_of_quarter
 
 
@@ -2253,3 +2253,174 @@ def _get_rss_memory_usage():
 
 	rss = psutil.Process().memory_info().rss // (1024 * 1024)
 	return rss
+
+
+def get_periods_in_range(from_date, to_date, frequency, standard_period:bool = True, max_month=53, company=None):#created
+	"""Receives a date range and then comes based on the frequency 
+	including weekly or monthly or yearly or so on and divides that range into smaller intervals with the size of the frequency
+	and returns an array of date ranges.
+
+	These intervals start from the beginning of the month 
+	or,if it is standard, from the beginning of the standard Gregorian or solar periods or the fiscal year period
+	"""
+	from dateutil.relativedelta import relativedelta
+
+	period_from_date = round_down_to_nearest_frequency(from_date, frequency, standard_period=standard_period, company=company)
+
+	increment = {"Monthly": 1, "Quarterly": 3, "Half-Yearly": 6, "Yearly": 12}.get(frequency, 1)
+
+	periodic_daterange = []
+	for dummy in range(1, max_month , increment):
+		if frequency == "Weekly":
+			period_end_date = period_from_date + relativedelta(days=6)
+		else:
+			period_end_date = add_months_to_date(period_from_date, increment)
+
+		if period_from_date<from_date:
+			period_from_date = from_date
+		
+		if period_end_date > to_date:
+			period_end_date = to_date
+
+		periodic_daterange.append([period_from_date, period_end_date])
+
+		period_from_date = period_end_date + relativedelta(days=1)
+		if period_end_date == to_date:
+			break
+
+	return periodic_daterange
+
+
+def add_months_to_date(date, increment):#created
+	"""Adds number of month to a date based on the Gregorian or solar calendar """
+
+	from dateutil.relativedelta import relativedelta
+
+	if frappe.defaults.get_defaults().calendar_type == 'jalali':
+		date = jdatetime.date.fromgregorian(date=date)
+		overflow_years, month = divmod(date.month + increment - 1, 12)
+		month = month + 1
+		year = date.year + overflow_years
+		day = date.day - 1
+		if day == 0:
+			day = 31
+			month = month - 1
+			if month == 0:
+				month = 12
+				year = year - 1
+		for i in range(5):
+			try:
+				new_date = jdatetime.date(year, month, day)
+				break
+			except ValueError:
+				day=day-1
+				
+		return new_date.togregorian()
+	else:
+		return date + relativedelta(months=increment, days=-1)
+
+
+def get_first_day_of_fiscal_year(date, use_custom_calendar: bool = False, company=None):
+	from erpnext.accounts.utils import get_fiscal_year
+
+	fiscal_year = get_fiscal_year(date, company="TEST")
+	return fiscal_year and fiscal_year[1] or date
+
+
+def round_down_to_nearest_frequency(date: str, frequency: str,standard_period:bool = True, company=None) -> datetime.datetime:#created
+	"""Rounds down the date to nearest frequency unit.
+	example:
+
+	>>> round_down_to_nearest_frequency("2021-02-21", "Monthly")
+	datetime.datetime(2021, 2, 1)
+
+	>>> round_down_to_nearest_frequency("2021-08-21", "Yearly")
+	datetime.datetime(2021, 1, 1)
+	"""
+	get_first_day_of_month=get_first_day
+
+	if standard_period: 
+
+		round_down_function = {
+			"Monthly": get_first_day_of_month,
+			"Quarterly": get_quarter_start,
+			"Weekly": get_first_day_of_week,
+			"Yearly": get_first_day_of_fiscal_year,
+			"Half-Yearly": get_first_day_of_month,
+
+		}.get(frequency, getdate)
+
+		if (frequency=="Yearly"):
+			return round_down_function(date, use_custom_calendar=True, company=company)
+		else:
+			return round_down_function(date, use_custom_calendar=True)
+	else:
+
+		if frequency=="Weekly":
+			return get_first_day_of_week(date, use_custom_calendar=True)
+		else:
+			return get_first_day_of_month(date, use_custom_calendar=True)
+		
+
+def get_standard_period_label(date, frequency, company=None):#created
+	"""Assigns a label to a date from one of the standard Gregorian or solar periods"""
+
+	from frappe import _
+	from erpnext.accounts.utils import get_fiscal_year
+
+	if frappe.defaults.get_defaults().calendar_type == 'jalali':
+		posting_date = jdatetime.date.fromgregorian(date=date)
+	else:
+		posting_date=date
+
+	if frequency == "Weekly":
+		label = _("Week {0} {1}").format(str(posting_date.isocalendar()[1]), str(posting_date.year))
+
+	elif frequency == "Monthly":
+		label = _(posting_date.strftime('%b')) + " " + str(posting_date.year)
+
+	elif frequency == "Quarterly":
+		label = _("Quarter {0} {1}").format(
+			str(((posting_date.month - 1) // 3) + 1), str(posting_date.year)
+		)
+
+	elif frequency == "Half-Yearly":
+		label = _(from_date.strftime('%b')) + " " + str(from_date.year) + "-" + _(to_date.strftime('%b')) + " " + str(to_date.year)
+
+	else:
+		fiscal_year = get_fiscal_year(date)
+
+		if frappe.defaults.get_defaults().calendar_type == 'jalali':
+			fiscal_year = (fiscal_year[0],jdatetime.date.fromgregorian(date=fiscal_year[1]),jdatetime.date.fromgregorian(date=fiscal_year[2]))
+
+		label = str(fiscal_year[2])
+
+	return label
+
+
+def get_nonstandard_period_label(from_date, to_date, frequency):#created
+	"""Assigns a label to a date range based on the start and end of that range"""
+
+	from frappe import _
+
+	if frappe.defaults.get_defaults().calendar_type == 'jalali':
+		from_date = jdatetime.date.fromgregorian(date=from_date)
+		to_date = jdatetime.date.fromgregorian(date=to_date)
+		
+	if frequency == "Weekly":
+		label = _("Week {0} {1}").format(str(to_date.isocalendar()[1]), str(to_date.year))
+
+	elif frequency == "Monthly":
+		label = _(to_date.strftime('%b')) + " " + str(to_date.year)
+
+	elif frequency == "Yearly":
+
+		if from_date.year == to_date.year:
+			label = str(from_date.year)
+		else:
+			label = str(from_date.year) + "-" + str(to_date.year)
+
+	else:
+		label = _(from_date.strftime('%b')) + " " + str(from_date.year) + "-" + _(to_date.strftime('%b')) + " " + str(to_date.year)
+
+	return label
