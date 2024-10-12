@@ -18,7 +18,7 @@ class WebFormField(Document):
 		default: DF.Data | None
 		depends_on: DF.Code | None
 		description: DF.Text | None
-		fieldname: DF.Literal
+		fieldname: DF.Literal[None]
 		fieldtype: DF.Literal[
 			"Attach",
 			"Attach Image",
@@ -56,6 +56,7 @@ class WebFormField(Document):
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
+		precision: DF.Literal["", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
 		read_only: DF.Check
 		read_only_depends_on: DF.Code | None
 		reqd: DF.Check

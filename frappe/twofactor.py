@@ -134,7 +134,7 @@ def two_factor_is_enabled_for_(user):
 def get_otpsecret_for_(user):
 	"""Set OTP Secret for user even if not set."""
 	if otp_secret := get_default(user + "_otpsecret"):
-		return decrypt(otp_secret)
+		return decrypt(otp_secret, key=f"{user}.otpsecret")
 
 	otp_secret = b32encode(os.urandom(10)).decode("utf-8")
 	set_default(user + "_otpsecret", encrypt(otp_secret))
@@ -213,8 +213,7 @@ def process_2fa_for_sms(user, token, otp_secret):
 	status = send_token_via_sms(otp_secret, token=token, phone_no=phone)
 	return {
 		"token_delivery": status,
-		"prompt": status
-		and "Enter verification code sent to {}".format(phone[:4] + "******" + phone[-3:]),
+		"prompt": status and "Enter verification code sent to {}".format(phone[:4] + "******" + phone[-3:]),
 		"method": "SMS",
 		"setup": status,
 	}
@@ -222,7 +221,6 @@ def process_2fa_for_sms(user, token, otp_secret):
 
 def process_2fa_for_otp_app(user, otp_secret, otp_issuer):
 	"""Process OTP App method for 2fa."""
-	totp_uri = pyotp.TOTP(otp_secret).provisioning_uri(user, issuer_name=otp_issuer)
 	if get_default(user + "_otplogin"):
 		otp_setup_completed = True
 	else:
@@ -249,9 +247,7 @@ def process_2fa_for_email(user, token, otp_secret, otp_issuer, method="Email"):
 	else:
 		"""Sending email verification"""
 		prompt = _("Verification code has been sent to your registered email address.")
-	status = send_token_via_email(
-		user, token, otp_secret, otp_issuer, subject=subject, message=message
-	)
+	status = send_token_via_email(user, token, otp_secret, otp_issuer, subject=subject, message=message)
 	return {
 		"token_delivery": status,
 		"prompt": status and prompt,
@@ -349,30 +345,14 @@ def send_token_via_email(user, token, otp_secret, otp_issuer, subject=None, mess
 	hotp = pyotp.HOTP(otp_secret)
 	otp = hotp.at(int(token))
 	template_args = {"otp": otp, "otp_issuer": otp_issuer}
-	if not subject:
-		subject = get_email_subject_for_2fa(template_args)
-	if not message:
-		message = get_email_body_for_2fa(template_args)
 
-	email_args = {
-		"recipients": user_email,
-		"sender": None,
-		"subject": subject,
-		"message": message,
-		"header": [_("Verfication Code"), "blue"],
-		"delayed": False,
-		"retry": 3,
-	}
-
-	enqueue(
-		method=frappe.sendmail,
-		queue="short",
-		timeout=300,
-		event=None,
-		is_async=True,
-		job_name=None,
-		now=False,
-		**email_args,
+	frappe.sendmail(
+		recipients=user_email,
+		subject=subject or get_email_subject_for_2fa(template_args),
+		message=message or get_email_body_for_2fa(template_args),
+		header=[_("Verification Code"), "blue"],
+		delayed=False,
+		retry=3,
 	)
 	return True
 
@@ -399,9 +379,7 @@ def create_barcode_folder():
 	folder = frappe.db.exists("File", {"file_name": folder_name})
 	if folder:
 		return folder
-	folder = frappe.get_doc(
-		{"doctype": "File", "file_name": folder_name, "is_folder": 1, "folder": "Home"}
-	)
+	folder = frappe.get_doc({"doctype": "File", "file_name": folder_name, "is_folder": 1, "folder": "Home"})
 	folder.insert(ignore_permissions=True)
 	return folder.name
 

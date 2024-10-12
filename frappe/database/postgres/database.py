@@ -12,7 +12,13 @@ from psycopg2.errorcodes import (
 	UNDEFINED_TABLE,
 	UNIQUE_VIOLATION,
 )
-from psycopg2.errors import ReadOnlySqlTransaction, SequenceGeneratorLimitExceeded, SyntaxError
+from psycopg2.errors import (
+	InterfaceError,
+	LockNotAvailable,
+	ReadOnlySqlTransaction,
+	SequenceGeneratorLimitExceeded,
+	SyntaxError,
+)
 from psycopg2.extensions import ISOLATION_LEVEL_REPEATABLE_READ
 
 import frappe
@@ -53,7 +59,7 @@ class PostgresExceptionUtil:
 	@staticmethod
 	def is_timedout(e):
 		# http://initd.org/psycopg/docs/extensions.html?highlight=datatype#psycopg2.extensions.QueryCanceledError
-		return isinstance(e, psycopg2.extensions.QueryCanceledError)
+		return isinstance(e, (psycopg2.extensions.QueryCanceledError | LockNotAvailable))
 
 	@staticmethod
 	def is_read_only_mode_error(e) -> bool:
@@ -111,6 +117,10 @@ class PostgresExceptionUtil:
 	def is_db_table_size_limit(e) -> bool:
 		return False
 
+	@staticmethod
+	def is_interface_error(e):
+		return isinstance(e, InterfaceError)
+
 
 class PostgresDatabase(PostgresExceptionUtil, Database):
 	REGEX_CHARACTER = "~"
@@ -160,11 +170,16 @@ class PostgresDatabase(PostgresExceptionUtil, Database):
 		return LazyDecode(self._cursor.query)
 
 	def get_connection(self):
-		conn = psycopg2.connect(
-			"host='{}' dbname='{}' user='{}' password='{}' port={}".format(
-				self.host, self.user, self.user, self.password, self.port
-			)
-		)
+		conn_settings = {
+			"user": self.user,
+			"dbname": self.cur_db_name,
+			"host": self.host,
+			"password": self.password,
+		}
+		if self.port:
+			conn_settings["port"] = self.port
+
+		conn = psycopg2.connect(**conn_settings)
 		conn.set_isolation_level(ISOLATION_LEVEL_REPEATABLE_READ)
 
 		return conn
@@ -194,7 +209,7 @@ class PostgresDatabase(PostgresExceptionUtil, Database):
 	def get_database_size(self):
 		"""'Returns database size in MB"""
 		db_size = self.sql(
-			"SELECT (pg_database_size(%s) / 1024 / 1024) as database_size", self.db_name, as_dict=True
+			"SELECT (pg_database_size(%s) / 1024 / 1024) as database_size", self.cur_db_name, as_dict=True
 		)
 		return db_size[0].get("database_size")
 
@@ -213,9 +228,7 @@ class PostgresDatabase(PostgresExceptionUtil, Database):
 			from information_schema.tables
 			where table_catalog='{}'
 				and table_type = 'BASE TABLE'
-				and table_schema='{}'""".format(
-					frappe.conf.db_name, frappe.conf.get("db_schema", "public")
-				)
+				and table_schema='{}'""".format(self.cur_db_name, frappe.conf.get("db_schema", "public"))
 			)
 		]
 
@@ -283,18 +296,16 @@ class PostgresDatabase(PostgresExceptionUtil, Database):
 		)
 
 	def create_global_search_table(self):
-		if not "__global_search" in self.get_tables():
+		if "__global_search" not in self.get_tables():
 			self.sql(
-				"""create table "__global_search"(
+				f"""create table "__global_search"(
 				doctype varchar(100),
-				name varchar({0}),
-				title varchar({0}),
+				name varchar({self.VARCHAR_LEN}),
+				title varchar({self.VARCHAR_LEN}),
 				content text,
-				route varchar({0}),
+				route varchar({self.VARCHAR_LEN}),
 				published int not null default 0,
-				unique (doctype, name))""".format(
-					self.VARCHAR_LEN
-				)
+				unique (doctype, name))"""
 			)
 
 	def create_user_settings_table(self):
@@ -322,7 +333,6 @@ class PostgresDatabase(PostgresExceptionUtil, Database):
 			db_table = PostgresTable(doctype, meta)
 			db_table.validate()
 
-			self.commit()
 			db_table.sync()
 			self.begin()
 
@@ -337,13 +347,11 @@ class PostgresDatabase(PostgresExceptionUtil, Database):
 
 	def has_index(self, table_name, index_name):
 		return self.sql(
-			"""SELECT 1 FROM pg_indexes WHERE tablename='{table_name}'
-			and indexname='{index_name}' limit 1""".format(
-				table_name=table_name, index_name=index_name
-			)
+			f"""SELECT 1 FROM pg_indexes WHERE tablename='{table_name}'
+			and indexname='{index_name}' limit 1"""
 		)
 
-	def add_index(self, doctype: str, fields: list, index_name: str = None):
+	def add_index(self, doctype: str, fields: list, index_name: str | None = None):
 		"""Creates an index with given fields if not already created.
 		Index name will be `fieldname1_fieldname2_index`"""
 		table_name = get_table_name(doctype)
@@ -369,16 +377,15 @@ class PostgresDatabase(PostgresExceptionUtil, Database):
 		):
 			self.commit()
 			self.sql(
-				"""ALTER TABLE `tab%s`
-					ADD CONSTRAINT %s UNIQUE (%s)"""
-				% (doctype, constraint_name, ", ".join(fields))
+				"""ALTER TABLE `tab{}`
+					ADD CONSTRAINT {} UNIQUE ({})""".format(doctype, constraint_name, ", ".join(fields))
 			)
 
 	def get_table_columns_description(self, table_name):
 		"""Returns list of column and its description"""
 		# pylint: disable=W1401
 		return self.sql(
-			"""
+			f"""
 			SELECT a.column_name AS name,
 			CASE LOWER(a.data_type)
 				WHEN 'character varying' THEN CONCAT('varchar(', a.character_maximum_length ,')')
@@ -398,9 +405,7 @@ class PostgresDatabase(PostgresExceptionUtil, Database):
 				ON SUBSTRING(b.indexdef, '(.*)') LIKE CONCAT('%', a.column_name, '%')
 			WHERE a.table_name = '{table_name}'
 			GROUP BY a.column_name, a.data_type, a.column_default, a.character_maximum_length;
-		""".format(
-				table_name=table_name
-			),
+		""",
 			as_dict=1,
 		)
 
@@ -443,7 +448,7 @@ def modify_query(query):
 
 def modify_values(values):
 	def modify_value(value):
-		if isinstance(value, (list, tuple)):
+		if isinstance(value, list | tuple):
 			value = tuple(modify_values(value))
 
 		elif isinstance(value, int):
@@ -457,7 +462,7 @@ def modify_values(values):
 	if isinstance(values, dict):
 		for k, v in values.items():
 			values[k] = modify_value(v)
-	elif isinstance(values, (tuple, list)):
+	elif isinstance(values, tuple | list):
 		new_values = []
 		for val in values:
 			new_values.append(modify_value(val))

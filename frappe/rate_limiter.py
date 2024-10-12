@@ -1,10 +1,11 @@
 # Copyright (c) 2020, Frappe Technologies Pvt. Ltd. and Contributors
 # License: MIT. See LICENSE
 
+import datetime
 from collections.abc import Callable
-from datetime import datetime
 from functools import wraps
 
+import pytz
 from werkzeug.wrappers import Response
 
 import frappe
@@ -34,7 +35,7 @@ class RateLimiter:
 		self.limit = int(limit * 1000000)
 		self.window = window
 
-		self.start = datetime.utcnow()
+		self.start = datetime.datetime.now(pytz.UTC)
 		timestamp = int(frappe.utils.now_datetime().timestamp())
 
 		self.window_number, self.spent = divmod(timestamp, self.window)
@@ -79,7 +80,7 @@ class RateLimiter:
 	def record_request_end(self):
 		if self.end is not None:
 			return
-		self.end = datetime.utcnow()
+		self.end = datetime.datetime.now(pytz.UTC)
 		self.duration = int((self.end - self.start).total_seconds() * 1000000)
 
 	def respond(self):
@@ -88,7 +89,7 @@ class RateLimiter:
 
 
 def rate_limit(
-	key: str = None,
+	key: str | None = None,
 	limit: int | Callable = 5,
 	seconds: int = 24 * 60 * 60,
 	methods: str | list = "ALL",
@@ -125,7 +126,7 @@ def rate_limit(
 
 			ip = frappe.local.request_ip if ip_based is True else None
 
-			user_key = frappe.form_dict[key] if key else None
+			user_key = frappe.form_dict.get(key, "")
 
 			identity = None
 
@@ -137,7 +138,7 @@ def rate_limit(
 			if not identity:
 				frappe.throw(_("Either key or IP flag is required."))
 
-			cache_key = f"rl:{frappe.form_dict.cmd}:{identity}"
+			cache_key = frappe.cache.make_key(f"rl:{frappe.form_dict.cmd}:{identity}")
 
 			value = frappe.cache.get(cache_key) or 0
 			if not value:
@@ -146,7 +147,8 @@ def rate_limit(
 			value = frappe.cache.incrby(cache_key, 1)
 			if value > _limit:
 				frappe.throw(
-					_("You hit the rate limit because of too many requests. Please try after sometime.")
+					_("You hit the rate limit because of too many requests. Please try after sometime."),
+					frappe.RateLimitExceededError,
 				)
 
 			return fn(*args, **kwargs)

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- Built on Frappe. https://frappeframework.com/ -->
-<html lang="en">
+<html lang="{{boot.lang}}">
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -33,6 +33,14 @@
 			<style>{{ colocated_css }}</style>
 		{%- endif %}
 	{%- endblock -%}
+
+	{% if boot.lang == "eo" %}
+	<script type="text/javascript">
+		var _jipt = [];
+		_jipt.push(['project', 'frappe']);
+	</script>
+	<script type="text/javascript" src="https://cdn.crowdin.com/jipt/jipt.js"></script>
+	{% endif %}
 
 	<script>
 		window.frappe = {};

@@ -26,6 +26,7 @@ class PackageRelease(Document):
 		path: DF.SmallText | None
 		publish: DF.Check
 		release_notes: DF.MarkdownEditor | None
+
 	# end: auto-generated types
 	def set_version(self):
 		# set the next patch release by default
@@ -122,6 +123,9 @@ class PackageRelease(Document):
 				attached_to_name=self.name,
 			)
 		)
+
+		# Set path to tarball
+		self.path = file.file_url
 
 		file.flags.ignore_duplicate_entry_error = True
 		file.insert()

@@ -5,6 +5,7 @@ import functools
 import hashlib
 import io
 import os
+import shutil
 import sys
 import traceback
 from collections import deque
@@ -229,12 +230,12 @@ def validate_url(
 	        bool: if `txt` represents a valid URL
 	"""
 	url = urlparse(txt)
-	is_valid = bool(url.netloc)
+	is_valid = bool(url.netloc) or (txt and txt.startswith("/"))
 
 	# Handle scheme validation
 	if isinstance(valid_schemes, str):
 		is_valid = is_valid and (url.scheme == valid_schemes)
-	elif isinstance(valid_schemes, (list, tuple, set)):
+	elif isinstance(valid_schemes, list | tuple | set):
 		is_valid = is_valid and (url.scheme in valid_schemes)
 
 	if not is_valid and throw:
@@ -262,17 +263,17 @@ def has_gravatar(email: str) -> str:
 
 	gravatar_url = get_gravatar_url(email, "404")
 	try:
-		res = requests.get(gravatar_url)
+		res = requests.get(gravatar_url, timeout=5)
 		if res.status_code == 200:
 			return gravatar_url
 		else:
 			return ""
-	except requests.exceptions.ConnectionError:
+	except requests.exceptions.RequestException:
 		return ""
 
 
 def get_gravatar_url(email: str, default: Literal["mm", "404"] = "mm") -> str:
-	hexdigest = hashlib.md5(frappe.as_unicode(email).encode("utf-8")).hexdigest()
+	hexdigest = hashlib.md5(frappe.as_unicode(email).encode("utf-8"), usedforsecurity=False).hexdigest()
 	return f"https://secure.gravatar.com/avatar/{hexdigest}?d={default}&s=200"
 
 
@@ -351,7 +352,7 @@ def dict_to_str(args: dict[str, Any], sep: str = "&") -> str:
 	"""
 	Converts a dictionary to URL
 	"""
-	return sep.join(f"{str(k)}=" + quote(str(args[k] or "")) for k in list(args))
+	return sep.join(f"{k!s}=" + quote(str(args[k] or "")) for k in list(args))
 
 
 def list_to_str(seq, sep=", "):
@@ -385,7 +386,7 @@ def remove_blanks(d: dict) -> dict:
 	Returns d with empty ('' or None) values stripped. Mutates inplace.
 	"""
 	for k, v in tuple(d.items()):
-		if v == "" or v == None:
+		if not v:
 			del d[k]
 	return d
 
@@ -443,11 +444,21 @@ def unesc(s, esc_chars):
 
 def execute_in_shell(cmd, verbose=False, low_priority=False, check_exit_code=False):
 	# using Popen instead of os.system - as recommended by python docs
+	import shlex
 	import tempfile
 	from subprocess import Popen
 
-	with (tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr):
-		kwargs = {"shell": True, "stdout": stdout, "stderr": stderr}
+	if isinstance(cmd, list):
+		# ensure it's properly escaped; only a single string argument executes via shell
+		cmd = shlex.join(cmd)
+
+	with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
+		kwargs = {
+			"shell": True,
+			"stdout": stdout,
+			"stderr": stderr,
+			"executable": shutil.which("bash") or "/bin/bash",
+		}
 
 		if low_priority:
 			kwargs["preexec_fn"] = lambda: os.nice(10)
@@ -470,7 +481,9 @@ def execute_in_shell(cmd, verbose=False, low_priority=False, check_exit_code=Fal
 			print(out)
 
 	if failed:
-		raise Exception("Command failed")
+		raise frappe.CommandFailedError(
+			"Command failed", out.decode(errors="replace"), err.decode(errors="replace")
+		)
 
 	return err, out
 
@@ -614,7 +627,7 @@ def update_progress_bar(txt, i, l, absolute=False):
 
 		complete = int(float(i + 1) / l * col)
 		completion_bar = ("=" * complete).ljust(col, " ")
-		percent_complete = f"{str(int(float(i + 1) / l * 100))}%"
+		percent_complete = f"{int(float(i + 1) / l * 100)!s}%"
 		status = f"{i} of {l}" if absolute else percent_complete
 		sys.stdout.write(f"\r{txt}: [{completion_bar}] {status}")
 		sys.stdout.flush()
@@ -648,7 +661,7 @@ def is_markdown(text):
 
 def is_a_property(x) -> bool:
 	"""Get properties (@property, @cached_property) in a controller class"""
-	return isinstance(x, (property, functools.cached_property))
+	return isinstance(x, property | functools.cached_property)
 
 
 def get_sites(sites_path=None):
@@ -894,7 +907,7 @@ def get_safe_filters(filters):
 	try:
 		filters = json.loads(filters)
 
-		if isinstance(filters, (int, float)):
+		if isinstance(filters, int | float):
 			filters = frappe.as_unicode(filters)
 
 	except (TypeError, ValueError):
@@ -1019,7 +1032,7 @@ def groupby_metric(iterable: dict[str, list], key: str):
 	        'india': [{'id':1, 'name': 'iplayer-1', 'ranking': 1}, {'id': 2, 'ranking': 1, 'name': 'iplayer-2'}, {'id': 2, 'ranking': 2, 'name': 'iplayer-3'}],
 	        'Aus': [{'id':1, 'name': 'aplayer-1', 'ranking': 1}, {'id': 2, 'ranking': 1, 'name': 'aplayer-2'}, {'id': 2, 'ranking': 2, 'name': 'aplayer-3'}]
 	}
-	>>> groupby(d, key='ranking')
+	>>> groupby(d, key="ranking")
 	{1: {'Aus': [{'id': 1, 'name': 'aplayer-1', 'ranking': 1},
 	                        {'id': 2, 'name': 'aplayer-2', 'ranking': 1}],
 	        'india': [{'id': 1, 'name': 'iplayer-1', 'ranking': 1},

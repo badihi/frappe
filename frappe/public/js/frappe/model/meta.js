@@ -154,7 +154,7 @@ $.extend(frappe.meta, {
 
 	get_doctype_for_field: function (doctype, key) {
 		var out = null;
-		if (in_list(frappe.model.std_fields_list, key)) {
+		if (frappe.model.std_fields_list.includes(key)) {
 			// standard
 			out = doctype;
 		} else if (frappe.meta.has_field(doctype, key)) {
@@ -164,7 +164,7 @@ $.extend(frappe.meta, {
 			frappe.meta.get_table_fields(doctype).every(function (d) {
 				if (
 					frappe.meta.has_field(d.options, key) ||
-					in_list(frappe.model.child_table_field_list, key)
+					frappe.model.child_table_field_list.includes(key)
 				) {
 					out = d.options;
 					return false;
@@ -264,7 +264,7 @@ $.extend(frappe.meta, {
 			});
 		$.each(print_formats, function (i, d) {
 			if (
-				!in_list(print_format_list, d.name) &&
+				!print_format_list.includes(d.name) &&
 				d.print_format_type !== "JS" &&
 				(cint(enable_raw_printing) || !d.raw_printing)
 			) {
@@ -292,13 +292,19 @@ $.extend(frappe.meta, {
 		if (!doc && cur_frm) doc = cur_frm.doc;
 
 		if (df && df.options) {
-			if (doc && df.options.indexOf(":") != -1) {
+			if (df.options.indexOf(":") != -1) {
 				var options = df.options.split(":");
 				if (options.length == 3) {
-					// get reference record e.g. Company
-					var docname = doc[options[1]];
-					if (!docname && cur_frm) {
-						docname = cur_frm.doc[options[1]];
+					let docname = null;
+					if (doc) {
+						// get reference record e.g. Company
+						docname = doc[options[1]];
+						if (!docname && cur_frm) {
+							docname = cur_frm.doc[options[1]];
+						}
+					} else {
+						// Try to get default value, useful for cases like Company overridden in session defaults
+						docname = frappe.defaults.get_user_default(options[1]);
 					}
 					currency =
 						frappe.model.get_value(options[0], docname, options[2]) ||

@@ -101,9 +101,9 @@ const selected = computed(() => store.selected(props.section.df.name));
 const column = computed(() => props.section.columns[props.section.columns.length - 1]);
 
 // section
-function add_section_above() {
+function add_section_below() {
 	let index = props.tab.sections.indexOf(props.section);
-	props.tab.sections.splice(index, 0, section_boilerplate());
+	props.tab.sections.splice(index + 1, 0, section_boilerplate());
 }
 
 function is_section_empty() {
@@ -260,30 +260,30 @@ function delete_column(with_children) {
 const options = computed(() => {
 	let groups = [
 		{
-			group: "Section",
+			group: __("Section"),
 			items: [
-				{ label: "Add section above", onClick: add_section_above },
-				{ label: "Remove section", onClick: remove_section },
+				{ label: __("Add section below"), onClick: add_section_below },
+				{ label: __("Remove section"), onClick: remove_section },
 			],
 		},
 		{
-			group: "Column",
-			items: [{ label: "Add column", onClick: add_column }],
+			group: __("Column"),
+			items: [{ label: __("Add column"), onClick: add_column }],
 		},
 	];
 
 	// add remove column option if there are more than one columns
 	if (props.section.columns.length > 1) {
 		groups[1].items.push({
-			label: "Remove column",
-			tooltip: "Remove last column",
+			label: __("Remove column"),
+			tooltip: __("Remove last column"),
 			onClick: remove_column,
 		});
 	} else if (props.section.columns[0].fields.length) {
 		// add remove all fields option if there is only one column and it has fields
 		groups[1].items.push({
-			label: "Empty column",
-			tooltip: "Remove all fields in the column",
+			label: __("Empty column"),
+			tooltip: __("Remove all fields in the column"),
 			onClick: () => delete_column(true),
 		});
 	}
@@ -291,8 +291,8 @@ const options = computed(() => {
 	// add move to tab option if the current section is not the first section
 	if (props.tab.sections.indexOf(props.section) > 0) {
 		groups[0].items.push({
-			label: "Move sections to new tab",
-			tooltip: "Move current and all subsequent sections to a new tab",
+			label: __("Move sections to new tab"),
+			tooltip: __("Move current and all subsequent sections to a new tab"),
 			onClick: move_sections_to_tab,
 		});
 	}

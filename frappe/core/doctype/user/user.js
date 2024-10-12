@@ -1,4 +1,14 @@
 frappe.ui.form.on("User", {
+	setup: function (frm) {
+		frm.set_query("default_workspace", () => {
+			return {
+				filters: {
+					for_user: ["in", [null, frappe.session.user]],
+					title: ["!=", "Welcome Workspace"],
+				},
+			};
+		});
+	},
 	before_load: function (frm) {
 		let update_tz_options = function () {
 			frm.fields_dict.time_zone.set_data(frappe.all_timezones);
@@ -75,7 +85,7 @@ frappe.ui.form.on("User", {
 		if (
 			frm.can_edit_roles &&
 			!frm.is_new() &&
-			in_list(["System User", "Website User"], frm.doc.user_type)
+			["System User", "Website User"].includes(frm.doc.user_type)
 		) {
 			if (!frm.roles_editor) {
 				const role_area = $('<div class="role-editor">').appendTo(
@@ -100,12 +110,17 @@ frappe.ui.form.on("User", {
 	refresh: function (frm) {
 		let doc = frm.doc;
 
+		frappe.xcall("frappe.apps.get_apps").then((r) => {
+			let apps = r?.map((r) => r.name) || [];
+			frm.set_df_property("default_app", "options", [" ", ...apps]);
+		});
+
 		if (frm.is_new()) {
 			frm.set_value("time_zone", frappe.sys_defaults.time_zone);
 		}
 
 		if (
-			in_list(["System User", "Website User"], frm.doc.user_type) &&
+			["System User", "Website User"].includes(frm.doc.user_type) &&
 			!frm.is_new() &&
 			!frm.roles_editor &&
 			frm.can_edit_roles
@@ -114,23 +129,8 @@ frappe.ui.form.on("User", {
 			return;
 		}
 
-		const hasChanged = (doc_attr, boot_attr) => {
-			return doc_attr && boot_attr && doc_attr !== boot_attr;
-		};
-
-		if (
-			doc.name === frappe.session.user &&
-			!doc.__unsaved &&
-			frappe.all_timezones &&
-			(hasChanged(doc.language, frappe.boot.user.language) ||
-				hasChanged(doc.time_zone, frappe.boot.time_zone.user) ||
-				hasChanged(doc.desk_theme, frappe.boot.user.desk_theme))
-		) {
-			frappe.msgprint(__("Refreshing..."));
-			window.location.reload();
-		}
-
 		frm.toggle_display(["sb1", "sb3", "modules_access"], false);
+		frm.trigger("setup_impersonation");
 
 		if (!frm.is_new()) {
 			if (has_access_to_edit_user()) {
@@ -291,7 +291,7 @@ frappe.ui.form.on("User", {
 			frm.set_df_property("enabled", "read_only", 0);
 		}
 
-		if (frappe.session.user !== "Administrator") {
+		if (frm.doc.name !== "Administrator") {
 			frm.toggle_enable("email", frm.is_new());
 		}
 	},
@@ -335,10 +335,66 @@ frappe.ui.form.on("User", {
 			},
 		});
 	},
-	on_update: function (frm) {
-		if (frappe.boot.time_zone && frappe.boot.time_zone.user !== frm.doc.time_zone) {
-			// Clear cache after saving to refresh the values of boot.
-			frappe.ui.toolbar.clear_cache();
+	after_save: function (frm) {
+		/**
+		 * Checks whether the effective value has changed.
+		 *
+		 * @param {Array.<string>} - Tuple with new override, previous override,
+		 *   and optionally fallback.
+		 * @returns {boolean} - Whether the resulting value has effectively changed
+		 */
+		const has_effectively_changed = ([new_override, prev_override, fallback = undefined]) => {
+			const prev_effective = prev_override || fallback;
+			const new_effective = new_override || fallback;
+			return new_override !== undefined && prev_effective !== new_effective;
+		};
+
+		const doc = frm.doc;
+		const boot = frappe.boot;
+		const attr_tuples = [
+			[doc.language, boot.user.language, boot.sysdefaults.language],
+			[doc.time_zone, boot.time_zone.user, boot.time_zone.system],
+			[doc.desk_theme, boot.user.desk_theme], // No system default.
+		];
+
+		if (doc.name === frappe.session.user && attr_tuples.some(has_effectively_changed)) {
+			frappe.msgprint(__("Refreshing..."));
+			window.location.reload();
+		}
+	},
+	setup_impersonation: function (frm) {
+		if (frappe.session.user === "Administrator" && frm.doc.name != "Administrator") {
+			frm.add_custom_button(__("Impersonate"), () => {
+				if (frm.doc.restrict_ip) {
+					frappe.msgprint({
+						message:
+							"There's IP restriction for this user, you can not impersonate as this user.",
+						title: "IP restriction is enabled",
+					});
+					return;
+				}
+				frappe.prompt(
+					[
+						{
+							fieldname: "reason",
+							fieldtype: "Small Text",
+							label: "Reason for impersonating",
+							description: __("Note: This will be shared with user."),
+							reqd: 1,
+						},
+					],
+					(values) => {
+						frappe
+							.xcall("frappe.core.doctype.user.user.impersonate", {
+								user: frm.doc.name,
+								reason: values.reason,
+							})
+							.then(() => window.location.reload());
+					},
+					__("Impersonate as {0}", [frm.doc.name]),
+					__("Confirm")
+				);
+			});
 		}
 	},
 });

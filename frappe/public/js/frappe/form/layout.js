@@ -212,6 +212,10 @@ frappe.ui.form.Layout = class Layout {
 
 		const parent = this.column.form.get(0);
 		const fieldobj = this.init_field(df, parent, render);
+
+		// An invalid control name will return in a null fieldobj
+		if (!fieldobj) return;
+
 		this.fields_list.push(fieldobj);
 		this.fields_dict[df.fieldname] = fieldobj;
 
@@ -234,7 +238,11 @@ frappe.ui.form.Layout = class Layout {
 			layout: this,
 		});
 
-		fieldobj.layout = this;
+		// make_control can return null for invalid control names
+		if (fieldobj) {
+			fieldobj.layout = this;
+		}
+
 		return fieldobj;
 	}
 
@@ -405,7 +413,7 @@ frappe.ui.form.Layout = class Layout {
 	}
 
 	set_tab_as_active() {
-		let frm_active_tab = this?.frm.get_active_tab?.();
+		let frm_active_tab = this.frm?.get_active_tab?.();
 		if (frm_active_tab) {
 			frm_active_tab.set_active();
 		} else if (this.tabs.length) {
@@ -621,7 +629,10 @@ frappe.ui.form.Layout = class Layout {
 					// show grid row (if exists)
 					field.grid.grid_rows[0].show_form();
 					return true;
-				} else if (!in_list(frappe.model.no_value_type, field.df.fieldtype)) {
+				} else if (
+					field.df.fieldtype === "Table MultiSelect" ||
+					!frappe.model.no_value_type.includes(field.df.fieldtype)
+				) {
 					this.set_focus(field);
 					return true;
 				}
