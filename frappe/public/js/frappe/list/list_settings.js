@@ -114,13 +114,13 @@ export default class ListSettings {
 					data-label="${me.fields[idx].label}" data-type="${me.fields[idx].type}">
 
 					<div class="row">
-						<div class="col-md-1">
+						<div class="col-1">
 							${frappe.utils.icon("drag", "xs", "", "", "sortable-handle " + show_sortable_handle)}
 						</div>
-						<div class="col-md-10" style="padding-left:0px;">
-							${me.fields[idx].label}
+						<div class="col-10" style="padding-left:0px;">
+							${__(me.fields[idx].label, null, me.doctype)}
 						</div>
-						<div class="col-md-1 ${can_remove}">
+						<div class="col-1 ${can_remove}">
 							<a class="text-muted remove-field" data-fieldname="${me.fields[idx].fieldname}">
 								${frappe.utils.icon("delete", "xs")}
 							</a>
@@ -132,14 +132,14 @@ export default class ListSettings {
 		fields_html.html(`
 			<div class="form-group">
 				<div class="clearfix">
-					<label class="control-label" style="padding-right: 0px;">Fields</label>
+					<label class="control-label" style="padding-right: 0px;">${__("Fields")}</label>
 				</div>
 				<div class="control-input-wrapper">
 				${fields}
 				</div>
 				<p class="help-box small text-muted">
 					<a class="add-new-fields text-muted">
-						+ Add / Remove Fields
+						${__("+ Add / Remove Fields")}
 					</a>
 				</p>
 			</div>
@@ -209,7 +209,7 @@ export default class ListSettings {
 		for (let idx = 0; idx < fields_order.length; idx++) {
 			me.fields.push({
 				fieldname: fields_order.item(idx).getAttribute("data-fieldname"),
-				label: fields_order.item(idx).getAttribute("data-label"),
+				label: __(fields_order.item(idx).getAttribute("data-label")),
 			});
 		}
 
@@ -264,7 +264,7 @@ export default class ListSettings {
 					let field = frappe.meta.get_docfield(me.doctype, value);
 					if (field) {
 						me.fields.push({
-							label: field.label,
+							label: __(field.label, null, me.doctype),
 							fieldname: field.fieldname,
 						});
 					}
@@ -316,11 +316,11 @@ export default class ListSettings {
 		meta.fields.forEach((field) => {
 			if (
 				field.in_list_view &&
-				!in_list(frappe.model.no_value_type, field.fieldtype) &&
+				!frappe.model.no_value_type.includes(field.fieldtype) &&
 				me.subject_field.fieldname != field.fieldname
 			) {
 				me.fields.push({
-					label: field.label,
+					label: __(field.label, null, me.doctype),
 					fieldname: field.fieldname,
 				});
 			}
@@ -331,7 +331,7 @@ export default class ListSettings {
 		let me = this;
 
 		me.subject_field = {
-			label: "ID",
+			label: __("ID"),
 			fieldname: "name",
 		};
 
@@ -339,7 +339,7 @@ export default class ListSettings {
 			let field = frappe.meta.get_docfield(me.doctype, meta.title_field.trim());
 
 			me.subject_field = {
-				label: field.label,
+				label: __(field.label, null, me.doctype),
 				fieldname: field.fieldname,
 			};
 		}
@@ -353,7 +353,7 @@ export default class ListSettings {
 		if (frappe.has_indicator(me.doctype)) {
 			me.fields.push({
 				type: "Status",
-				label: "Status",
+				label: __("Status"),
 				fieldname: "status_field",
 			});
 		}
@@ -363,11 +363,11 @@ export default class ListSettings {
 		let multiselect_fields = [];
 
 		meta.fields.forEach((field) => {
-			if (!in_list(frappe.model.no_value_type, field.fieldtype)) {
+			if (!frappe.model.no_value_type.includes(field.fieldtype)) {
 				multiselect_fields.push({
-					label: field.label,
+					label: __(field.label, null, field.doctype),
 					value: field.fieldname,
-					checked: in_list(fields, field.fieldname),
+					checked: fields.includes(field.fieldname),
 				});
 			}
 		});
@@ -384,7 +384,7 @@ export default class ListSettings {
 		}
 
 		existing_fields.forEach((column) => {
-			if (!in_list(new_fields, column)) {
+			if (!new_fields.includes(column)) {
 				removed_fields.push(column);
 			}
 		});

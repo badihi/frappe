@@ -5,11 +5,6 @@ import click
 import frappe
 from frappe.database.db_manager import DbManager
 
-REQUIRED_MARIADB_CONFIG = {
-	"character_set_server": "utf8mb4",
-	"collation_server": "utf8mb4_unicode_ci",
-}
-
 
 def get_mariadb_variables():
 	return frappe._dict(frappe.db.sql("show variables"))
@@ -23,7 +18,7 @@ def get_mariadb_version(version_string: str = ""):
 	return version.rsplit(".", 1)
 
 
-def setup_database(force, source_sql, verbose, no_mariadb_socket=False):
+def setup_database(force, verbose, no_mariadb_socket=False):
 	frappe.local.session = frappe._dict({"user": "Administrator"})
 
 	db_name = frappe.local.conf.db_name
@@ -55,8 +50,6 @@ def setup_database(force, source_sql, verbose, no_mariadb_socket=False):
 	# close root connection
 	root_conn.close()
 
-	bootstrap_database(db_name, verbose, source_sql)
-
 
 def drop_user_and_database(db_name, root_login, root_password):
 	frappe.local.db = get_root_connection(root_login, root_password)
@@ -70,13 +63,11 @@ def bootstrap_database(db_name, verbose, source_sql=None):
 	import sys
 
 	frappe.connect(db_name=db_name)
-	if not check_database_settings():
-		print("Database settings do not match expected values; stopping database setup.")
-		sys.exit(1)
+	check_compatible_versions()
 
 	import_db_from_sql(source_sql, verbose)
-
 	frappe.connect(db_name=db_name)
+
 	if "tabDefaultValue" not in frappe.db.get_tables(cached=False):
 		from click import secho
 
@@ -97,37 +88,11 @@ def import_db_from_sql(source_sql=None, verbose=False):
 	db_name = frappe.conf.db_name
 	if not source_sql:
 		source_sql = os.path.join(os.path.dirname(__file__), "framework_mariadb.sql")
-	DbManager(frappe.local.db).restore_database(db_name, source_sql, db_name, frappe.conf.db_password)
+	DbManager(frappe.local.db).restore_database(
+		verbose, db_name, source_sql, db_name, frappe.conf.db_password
+	)
 	if verbose:
 		print("Imported from database %s" % source_sql)
-
-
-def check_database_settings():
-
-	check_compatible_versions()
-
-	# Check each expected value vs. actuals:
-	mariadb_variables = get_mariadb_variables()
-	result = True
-	for key, expected_value in REQUIRED_MARIADB_CONFIG.items():
-		if mariadb_variables.get(key) != expected_value:
-			print(
-				"For key %s. Expected value %s, found value %s"
-				% (key, expected_value, mariadb_variables.get(key))
-			)
-			result = False
-
-	if not result:
-		print(
-			(
-				"{sep2}Creation of your site - {site} failed because MariaDB is not properly {sep}"
-				"configured.{sep2}"
-				"Please verify the above settings in MariaDB's my.cnf.  Restart MariaDB.{sep}"
-				"And then run `bench new-site {site}` again.{sep2}"
-			).format(site=frappe.local.site, sep2="\n\n", sep="\n")
-		)
-
-	return result
 
 
 def check_compatible_versions():
@@ -170,6 +135,7 @@ def get_root_connection(root_login, root_password):
 			port=frappe.conf.db_port,
 			user=root_login,
 			password=root_password,
+			cur_db_name=None,
 		)
 
 	return frappe.local.flags.root_connection

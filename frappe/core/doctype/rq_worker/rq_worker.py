@@ -4,6 +4,7 @@
 import datetime
 from contextlib import suppress
 
+import pytz
 from rq import Worker
 
 import frappe
@@ -34,10 +35,10 @@ class RQWorker(Document):
 		utilization_percent: DF.Percent
 		worker_name: DF.Data | None
 	# end: auto-generated types
-	def load_from_db(self):
 
+	def load_from_db(self):
 		all_workers = get_workers()
-		workers = [w for w in all_workers if w.pid == cint(self.name)]
+		workers = [w for w in all_workers if w.name == self.name]
 		if not workers:
 			raise frappe.DoesNotExistError
 		d = serialize_worker(workers[0])
@@ -84,7 +85,7 @@ def serialize_worker(worker: Worker) -> frappe._dict:
 		current_job = None
 
 	return frappe._dict(
-		name=worker.pid,
+		name=worker.name,
 		queue=queue,
 		queue_type=queue_types,
 		worker_name=worker.name,
@@ -105,5 +106,7 @@ def serialize_worker(worker: Worker) -> frappe._dict:
 
 def compute_utilization(worker: Worker) -> float:
 	with suppress(Exception):
-		total_time = (datetime.datetime.utcnow() - worker.birth_date).total_seconds()
+		total_time = (
+			datetime.datetime.now(pytz.UTC) - worker.birth_date.replace(tzinfo=pytz.UTC)
+		).total_seconds()
 		return worker.total_working_time / total_time * 100

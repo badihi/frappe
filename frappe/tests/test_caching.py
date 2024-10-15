@@ -15,7 +15,7 @@ register_with_external_service = MagicMock(return_value=True)
 def request_specific_api(a: list | tuple | dict | int, b: int) -> int:
 	# API that takes very long to return a result
 	todays_value = external_service()
-	if not isinstance(a, (int, float)):
+	if not isinstance(a, int | float):
 		a = 1
 	return a**b * todays_value
 
@@ -44,7 +44,9 @@ class TestCachingUtils(FrappeTestCase):
 			frappe.get_last_doc("DocType"),
 			frappe._dict(),
 		]
-		same_output_received = lambda: all([x for x in set(retval) if x == retval[0]])
+
+		def same_output_received():
+			return all([x for x in set(retval) if x == retval[0]])
 
 		# ensure that external service was called only once
 		# thereby return value of request_specific_api is cached
@@ -182,6 +184,34 @@ class TestRedisCache(FrappeAPITestCase):
 		calculate_area(10)
 		self.assertEqual(function_call_count, 2)
 
+	def test_user_cache(self):
+		function_call_count = 0
+		PI = 3.1415
+		ENGINEERING_PI = _E = 3
+
+		@redis_cache(user=True)
+		def calculate_area(radius: float) -> float:
+			nonlocal function_call_count
+			PI_APPROX = ENGINEERING_PI if frappe.session.user == "Engineer" else PI
+			function_call_count += 1
+			return PI_APPROX * radius**2
+
+		with self.set_user("Engineer"):
+			self.assertEqual(calculate_area(1), ENGINEERING_PI)
+			self.assertEqual(function_call_count, 1)
+
+		with self.set_user("Mathematician"):
+			self.assertEqual(calculate_area(1), PI)
+			self.assertEqual(function_call_count, 2)
+
+		with self.set_user("Engineer"):
+			self.assertEqual(calculate_area(1), ENGINEERING_PI)
+			self.assertEqual(function_call_count, 2)
+
+		with self.set_user("Mathematician"):
+			self.assertEqual(calculate_area(1), PI)
+			self.assertEqual(function_call_count, 2)
+
 
 class TestDocumentCache(FrappeAPITestCase):
 	TEST_DOCTYPE = "User"
@@ -232,7 +262,6 @@ class TestDocumentCache(FrappeAPITestCase):
 
 class TestRedisWrapper(FrappeAPITestCase):
 	def test_delete_keys(self):
-
 		prefix = "test_del_"
 
 		for i in range(5):

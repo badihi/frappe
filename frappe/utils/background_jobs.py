@@ -4,6 +4,7 @@ import socket
 import time
 from collections import defaultdict
 from collections.abc import Callable
+from contextlib import suppress
 from functools import lru_cache
 from typing import Any, NoReturn
 from uuid import uuid4
@@ -21,7 +22,7 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fi
 import frappe
 import frappe.monitor
 from frappe import _
-from frappe.utils import CallbackManager, cint, cstr, get_bench_id
+from frappe.utils import CallbackManager, cint, get_bench_id
 from frappe.utils.commands import log
 from frappe.utils.deprecations import deprecation_warning
 from frappe.utils.redis_queue import RedisQueue
@@ -48,8 +49,7 @@ def get_queues_timeout():
 		"default": default_timeout,
 		"long": 1500,
 		**{
-			worker: config.get("timeout", default_timeout)
-			for worker, config in custom_workers_config.items()
+			worker: config.get("timeout", default_timeout) for worker, config in custom_workers_config.items()
 		},
 	}
 
@@ -64,10 +64,10 @@ def enqueue(
 	now: bool = False,
 	enqueue_after_commit: bool = False,
 	*,
-	on_success: Callable = None,
-	on_failure: Callable = None,
+	on_success: Callable | None = None,
+	on_failure: Callable | None = None,
 	at_front: bool = False,
-	job_id: str = None,
+	job_id: str | None = None,
 	deduplicate=False,
 	**kwargs,
 ) -> Job | Any:
@@ -130,12 +130,18 @@ def enqueue(
 	if not timeout:
 		timeout = get_queues_timeout().get(queue) or 300
 
+	# Prepare a more readable name than <function $name at $address>
+	if isinstance(method, Callable):
+		method_name = f"{method.__module__}.{method.__qualname__}"
+	else:
+		method_name = method
+
 	queue_args = {
 		"site": frappe.local.site,
 		"user": frappe.session.user,
 		"method": method,
 		"event": event,
-		"job_name": job_name or cstr(method),
+		"job_name": job_name or method_name,
 		"is_async": is_async,
 		"kwargs": kwargs,
 	}
@@ -162,9 +168,7 @@ def enqueue(
 	return enqueue_call()
 
 
-def enqueue_doc(
-	doctype, name=None, method=None, queue="default", timeout=300, now=False, **kwargs
-):
+def enqueue_doc(doctype, name=None, method=None, queue="default", timeout=300, now=False, **kwargs):
 	"""Enqueue a method to be run on a document"""
 	return enqueue(
 		"frappe.utils.background_jobs.run_doc_method",
@@ -187,7 +191,8 @@ def execute_job(site, method, event, job_name, kwargs, user=None, is_async=True,
 	retval = None
 
 	if is_async:
-		frappe.connect(site)
+		frappe.init(site=site)
+		frappe.connect()
 		if os.environ.get("CI"):
 			frappe.flags.in_test = True
 
@@ -198,7 +203,7 @@ def execute_job(site, method, event, job_name, kwargs, user=None, is_async=True,
 		method_name = method
 		method = frappe.get_attr(method)
 	else:
-		method_name = cstr(method.__name__)
+		method_name = f"{method.__module__}.{method.__qualname__}"
 
 	frappe.local.job = frappe._dict(
 		site=site,
@@ -262,12 +267,13 @@ def start_worker(
 	rq_password: str | None = None,
 	burst: bool = False,
 	strategy: DequeueStrategy | None = DequeueStrategy.DEFAULT,
-) -> NoReturn | None:  # pragma: no cover
+) -> None:  # pragma: no cover
 	"""Wrapper to start rq worker. Connects to redis and monitors these queues."""
 
 	if not strategy:
 		strategy = DequeueStrategy.DEFAULT
 
+	_start_sentry()
 	_freeze_gc()
 
 	with frappe.init_site():
@@ -277,7 +283,6 @@ def start_worker(
 		if queue:
 			queue = [q.strip() for q in queue.split(",")]
 		queues = get_queue_list(queue, build_queue_name=True)
-		queue_name = queue and generate_qname(queue)
 
 	if os.environ.get("CI"):
 		setup_loghandlers("ERROR")
@@ -288,7 +293,7 @@ def start_worker(
 	if quiet:
 		logging_level = "WARNING"
 
-	worker = Worker(queues, name=get_worker_name(queue_name), connection=redis_connection)
+	worker = Worker(queues, connection=redis_connection)
 	worker.work(
 		logging_level=logging_level,
 		burst=burst,
@@ -308,6 +313,18 @@ def start_worker_pool(
 
 	WARNING: This feature is considered "EXPERIMENTAL".
 	"""
+
+	_start_sentry()
+
+	# If gc.freeze is done then importing modules before forking allows us to share the memory
+	import frappe.database.query  # sqlparse and indirect imports
+	import frappe.query_builder  # pypika
+	import frappe.utils.data  # common utils
+	import frappe.utils.safe_exec
+	import frappe.utils.typing_validations  # any whitelisted method uses this
+	import frappe.website.path_resolver  # all the page types and resolver
+
+	# end: module pre-loading
 
 	_freeze_gc()
 
@@ -346,9 +363,7 @@ def get_worker_name(queue):
 
 	if queue:
 		# hostname.pid is the default worker name
-		name = "{uuid}.{hostname}.{pid}.{queue}".format(
-			uuid=uuid4().hex, hostname=socket.gethostname(), pid=os.getpid(), queue=queue
-		)
+		name = f"{uuid4().hex}.{socket.gethostname()}.{os.getpid()}.{queue}"
 
 	return name
 
@@ -459,15 +474,18 @@ def get_redis_conn(username=None, password=None):
 			return get_redis_connection_without_auth()
 		else:
 			return RedisQueue.get_connection(**cred)
-	except (redis.exceptions.AuthenticationError, redis.exceptions.ResponseError):
+	except redis.exceptions.AuthenticationError:
 		log(
 			f'Wrong credentials used for {cred.username or "default user"}. '
 			"You can reset credentials using `bench create-rq-users` CLI and restart the server",
 			colour="red",
 		)
 		raise
-	except Exception:
-		log(f"Please make sure that Redis Queue runs @ {frappe.get_conf().redis_queue}", colour="red")
+	except Exception as e:
+		log(
+			f"Please make sure that Redis Queue runs @ {frappe.get_conf().redis_queue}. Redis reported error: {e!s}",
+			colour="red",
+		)
 		raise
 
 
@@ -563,7 +581,7 @@ def truncate_failed_registry(job, connection, type, value, traceback):
 	"""Ensures that number of failed jobs don't exceed specified limits."""
 	from frappe.utils import create_batch
 
-	conf = frappe.get_conf(site=job.kwargs.get("site"))
+	conf = frappe.conf if frappe.conf else frappe.get_conf(site=job.kwargs.get("site"))
 	limit = (conf.get("rq_failed_jobs_limit") or RQ_FAILED_JOBS_LIMIT) - 1
 
 	for queue in get_queues(connection=connection):
@@ -572,3 +590,58 @@ def truncate_failed_registry(job, connection, type, value, traceback):
 		for job_ids in create_batch(failed_jobs, 100):
 			for job_obj in Job.fetch_many(job_ids=job_ids, connection=connection):
 				job_obj and fail_registry.remove(job_obj, delete_job=True)
+
+
+def flush_telemetry():
+	"""Forcefully flush pending events.
+
+	This is required in context of background jobs where process might die before posthog gets time
+	to push events."""
+	ph = getattr(frappe.local, "posthog", None)
+	with suppress(Exception):
+		ph and ph.flush()
+
+
+def _start_sentry():
+	sentry_dsn = os.getenv("FRAPPE_SENTRY_DSN")
+	if not sentry_dsn:
+		return
+
+	import sentry_sdk
+	from sentry_sdk.integrations.argv import ArgvIntegration
+	from sentry_sdk.integrations.atexit import AtexitIntegration
+	from sentry_sdk.integrations.dedupe import DedupeIntegration
+	from sentry_sdk.integrations.excepthook import ExcepthookIntegration
+	from sentry_sdk.integrations.modules import ModulesIntegration
+
+	from frappe.utils.sentry import FrappeIntegration, before_send
+
+	integrations = [
+		AtexitIntegration(),
+		ExcepthookIntegration(),
+		DedupeIntegration(),
+		ModulesIntegration(),
+		ArgvIntegration(),
+	]
+
+	experiments = {}
+	kwargs = {}
+
+	if os.getenv("ENABLE_SENTRY_DB_MONITORING"):
+		integrations.append(FrappeIntegration())
+		experiments["record_sql_params"] = True
+
+	if tracing_sample_rate := os.getenv("SENTRY_TRACING_SAMPLE_RATE"):
+		kwargs["traces_sample_rate"] = float(tracing_sample_rate)
+
+	sentry_sdk.init(
+		dsn=sentry_dsn,
+		before_send=before_send,
+		attach_stacktrace=True,
+		release=frappe.__version__,
+		auto_enabling_integrations=False,
+		default_integrations=False,
+		integrations=integrations,
+		_experiments=experiments,
+		**kwargs,
+	)

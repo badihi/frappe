@@ -6,7 +6,7 @@ import quopri
 import traceback
 from contextlib import suppress
 from email.parser import Parser
-from email.policy import SMTPUTF8, default
+from email.policy import SMTP
 
 import frappe
 from frappe import _, safe_encode, task
@@ -131,12 +131,12 @@ class EmailQueue(Document):
 	def attachments_list(self):
 		return json.loads(self.attachments) if self.attachments else []
 
-	def get_email_account(self):
+	def get_email_account(self, raise_error=False):
 		if self.email_account:
 			return frappe.get_cached_doc("Email Account", self.email_account)
 
 		return EmailAccount.find_outgoing(
-			match_by_email=self.sender, match_by_doctype=self.reference_doctype
+			match_by_email=self.sender, match_by_doctype=self.reference_doctype, _raise_error=raise_error
 		)
 
 	def is_to_be_sent(self):
@@ -158,6 +158,7 @@ class EmailQueue(Document):
 			return
 
 		with SendMailContext(self, smtp_server_instance) as ctx:
+			ctx.fetch_smtp_server()
 			message = None
 			for recipient in self.recipients:
 				if recipient.is_mail_sent():
@@ -169,7 +170,9 @@ class EmailQueue(Document):
 				else:
 					if not frappe.flags.in_test or frappe.flags.testing_email:
 						ctx.smtp_server.session.sendmail(
-							from_addr=self.sender, to_addrs=recipient.recipient, msg=message
+							from_addr=self.sender,
+							to_addrs=recipient.recipient,
+							msg=message.decode("utf-8").encode(),
 						)
 
 				ctx.update_recipient_status_to_sent(recipient)
@@ -192,9 +195,7 @@ class EmailQueue(Document):
 
 		# Delete queue table
 		(
-			frappe.qb.from_(email_queue)
-			.delete()
-			.where(email_queue.modified < (Now() - Interval(days=days)))
+			frappe.qb.from_(email_queue).delete().where(email_queue.modified < (Now() - Interval(days=days)))
 		).run()
 
 		# delete child tables, note that this has potential to leave some orphan
@@ -231,13 +232,16 @@ class SendMailContext:
 		smtp_server_instance: SMTPServer = None,
 	):
 		self.queue_doc: EmailQueue = queue_doc
-		self.email_account_doc = queue_doc.get_email_account()
-
-		self.smtp_server: SMTPServer = smtp_server_instance or self.email_account_doc.get_smtp_server()
-
+		self.smtp_server: SMTPServer = smtp_server_instance
 		self.sent_to_atleast_one_recipient = any(
 			rec.recipient for rec in self.queue_doc.recipients if rec.is_mail_sent()
 		)
+		self.email_account_doc = None
+
+	def fetch_smtp_server(self):
+		self.email_account_doc = self.queue_doc.get_email_account(raise_error=True)
+		if not self.smtp_server:
+			self.smtp_server = self.email_account_doc.get_smtp_server()
 
 	def __enter__(self):
 		self.queue_doc.update_status(status="Sending", commit=True)
@@ -245,7 +249,7 @@ class SendMailContext:
 
 	def __exit__(self, exc_type, exc_val, exc_tb):
 		if exc_type:
-			update_fields = {"error": "".join(traceback.format_tb(exc_tb))}
+			update_fields = {"error": frappe.get_traceback()}
 			if self.queue_doc.retry < get_email_retry_limit():
 				update_fields.update(
 					{
@@ -264,7 +268,7 @@ class SendMailContext:
 	@savepoint(catch=Exception)
 	def notify_failed_email(self):
 		# Parse the email body to extract the subject
-		subject = Parser(policy=default).parsestr(self.queue_doc.message)["Subject"]
+		subject = Parser(policy=SMTP).parsestr(self.queue_doc.message)["Subject"]
 
 		# Construct the notification
 		notification = frappe.new_doc("Notification Log")
@@ -281,7 +285,7 @@ class SendMailContext:
 		recipient.update_db(status="Sent", commit=True)
 
 	def get_message_object(self, message):
-		return Parser(policy=SMTPUTF8).parsestr(message)
+		return Parser(policy=SMTP).parsestr(message)
 
 	def message_placeholder(self, placeholder_key):
 		# sourcery skip: avoid-builtin-shadow
@@ -293,15 +297,14 @@ class SendMailContext:
 		}
 		return map.get(placeholder_key)
 
-	def build_message(self, recipient_email):
+	def build_message(self, recipient_email) -> bytes:
 		"""Build message specific to the recipient."""
 		message = self.queue_doc.message
+
 		if not message:
 			return ""
 
-		message = message.replace(
-			self.message_placeholder("tracker"), self.get_tracker_str(recipient_email)
-		)
+		message = message.replace(self.message_placeholder("tracker"), self.get_tracker_str(recipient_email))
 		message = message.replace(
 			self.message_placeholder("unsubscribe_url"), self.get_unsubscribe_str(recipient_email)
 		)
@@ -323,7 +326,11 @@ class SendMailContext:
 			}
 			tracker_url = get_url(f"{email_read_tracker_url}?{get_signed_params(params)}")
 
-		elif frappe.conf.use_ssl and self.email_account_doc.track_email_status:
+		elif (
+			self.email_account_doc
+			and self.email_account_doc.track_email_status
+			and self.queue_doc.communication
+		):
 			tracker_url = f"{get_url()}/api/method/frappe.core.doctype.communication.email.mark_email_as_seen?name={self.queue_doc.communication}"
 
 		if tracker_url:
@@ -383,10 +390,32 @@ class SendMailContext:
 			elif attachment.get("print_format_attachment") == 1:
 				attachment.pop("print_format_attachment", None)
 				print_format_file = frappe.attach_print(**attachment)
+				self._store_file(print_format_file["fname"], print_format_file["fcontent"])
 				print_format_file.update({"parent": message_obj})
 				add_attachment(**print_format_file)
 
 		return safe_encode(message_obj.as_string())
+
+	def _store_file(self, file_name, content):
+		if not frappe.get_system_settings("store_attached_pdf_document"):
+			return
+
+		file_data = frappe._dict(file_name=file_name, is_private=1)
+
+		# Store on communication if available, else email queue doc
+		if self.queue_doc.communication:
+			file_data.attached_to_doctype = "Communication"
+			file_data.attached_to_name = self.queue_doc.communication
+		else:
+			file_data.attached_to_doctype = self.queue_doc.doctype
+			file_data.attached_to_name = self.queue_doc.name
+
+		if frappe.db.exists("File", file_data):
+			return
+
+		file = frappe.new_doc("File", **file_data)
+		file.content = content
+		file.insert()
 
 
 @frappe.whitelist()
@@ -405,11 +434,9 @@ def bulk_retry(queues):
 	)
 
 	email_queue = frappe.qb.DocType("Email Queue")
-	frappe.qb.update(email_queue).set(email_queue.status, "Not Sent").set(
-		email_queue.modified, now()
-	).set(email_queue.modified_by, frappe.session.user).where(
-		email_queue.name.isin(queues) & email_queue.status == "Error"
-	).run()
+	frappe.qb.update(email_queue).set(email_queue.status, "Not Sent").set(email_queue.modified, now()).set(
+		email_queue.modified_by, frappe.session.user
+	).where(email_queue.name.isin(queues) & email_queue.status == "Error").run()
 
 
 @frappe.whitelist()
@@ -428,9 +455,7 @@ def toggle_sending(enable):
 
 def on_doctype_update():
 	"""Add index in `tabCommunication` for `(reference_doctype, reference_name)`"""
-	frappe.db.add_index(
-		"Email Queue", ("status", "send_after", "priority", "creation"), "index_bulk_flush"
-	)
+	frappe.db.add_index("Email Queue", ("status", "send_after", "priority", "creation"), "index_bulk_flush")
 
 	frappe.db.add_index("Email Queue", ["message_id(140)"])
 
@@ -687,13 +712,13 @@ class QueueBuilder:
 			mail.set_in_reply_to(self.in_reply_to)
 		return mail
 
-	def process(self, send_now=False):
+	def process(self, send_now=False) -> EmailQueue | None:
 		"""Build and return the email queues those are created.
 
 		Sends email incase if it is requested to send now.
 		"""
 		final_recipients = self.final_recipients()
-		queue_separately = (final_recipients and self.queue_separately) or len(final_recipients) > 20
+		queue_separately = (final_recipients and self.queue_separately) or len(final_recipients) > 100
 		if not (final_recipients + self.final_cc()):
 			return []
 
@@ -705,6 +730,7 @@ class QueueBuilder:
 			recipients = list(set(final_recipients + self.final_cc() + self.bcc))
 			q = EmailQueue.new({**queue_data, **{"recipients": recipients}}, ignore_permissions=True)
 			send_now and q.send()
+			return q
 		else:
 			if send_now and len(final_recipients) >= 1000:
 				# force queueing if there are too many recipients to avoid timeouts
@@ -726,10 +752,10 @@ class QueueBuilder:
 		# This re-uses smtp server instance to minimize the cost of new session creation
 		smtp_server_instance = None
 		for r in final_recipients:
-			recipients = list(set([r] + self.final_cc() + self.bcc))
+			recipients = list(set([r, *self.final_cc(), *self.bcc]))
 			q = EmailQueue.new({**queue_data, **{"recipients": recipients}}, ignore_permissions=True)
 			if not smtp_server_instance:
-				email_account = q.get_email_account()
+				email_account = q.get_email_account(raise_error=True)
 				smtp_server_instance = email_account.get_smtp_server()
 
 			with suppress(Exception):

@@ -14,6 +14,7 @@ body {
 		font-size: var(--text-xs);
 		text-transform: uppercase;
 		cursor: pointer;
+		margin-bottom: var(--margin-xs) !important;
 
 		span {
 			pointer-events: none;
@@ -133,7 +134,7 @@ body {
 	}
 
 	.widget-head {
-		@include flex(flex, flex-start, center, null);
+		@include flex(flex, space-between, center, null);
 
 		.widget-label {
 			min-width: 0px;
@@ -549,6 +550,8 @@ body {
 
 	&.shortcut-widget-box {
 		cursor: pointer;
+		padding: 2px 7px;
+		align-items: flex-start;
 
 		&:hover {
 			--icon-stroke: var(--invert-neutral);
@@ -969,6 +972,10 @@ body {
 					.links-widget-box {
 						background-color: var(--bg-color) !important;
 					}
+
+					.workspace-footer {
+						display: none;
+					}
 				}
 			}
 
@@ -988,6 +995,12 @@ body {
 		box-shadow: none;
 		border-radius: var(--border-radius-lg);
 		padding: var(--padding-sm);
+	}
+
+	.workspace-footer {
+		height: 30px;
+		display: flex;
+		flex-direction: row-reverse;
 	}
 
 	.block-menu-item-icon svg {
@@ -1019,7 +1032,7 @@ body {
 			}
 
 			.drop-icon {
-				padding: 10px 12px 10px 2px;
+				padding: 0px 12px 0px 2px;
 			}
 
 			svg {
@@ -1038,13 +1051,14 @@ body {
 		.item-anchor {
 			display: flex;
 			overflow: hidden;
-			padding: 4px 0px 4px 8px;
+			padding: 3px 0px 3px 8px;
 			flex: 1;
 		}
 	}
 
 	.sidebar-item-container {
 		position: relative;
+		margin-left: -10px;
 
 		&[item-is-hidden="1"] {
 			display: none;
@@ -1061,6 +1075,10 @@ body {
 			.standard-sidebar-item {
 				justify-content: start;
 			}
+		}
+
+		.indicator {
+			margin-left: 5px;
 		}
 	}
 
@@ -1274,6 +1292,11 @@ body {
 
 						.h4 {
 							@include get_textstyle("xl", "semibold");
+						}
+
+						.h5 {
+							font-weight: normal;
+							color: var(--text-light);
 						}
 
 						&:focus {

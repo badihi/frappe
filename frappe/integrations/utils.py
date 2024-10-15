@@ -6,26 +6,30 @@ import json
 from urllib.parse import parse_qs
 
 import frappe
-from frappe import _
 from frappe.utils import get_request_session
 
 
-def make_request(method, url, auth=None, headers=None, data=None, json=None):
+def make_request(method, url, auth=None, headers=None, data=None, json=None, params=None):
 	auth = auth or ""
 	data = data or {}
 	headers = headers or {}
 
 	try:
 		s = get_request_session()
-		frappe.flags.integration_request = s.request(
-			method, url, data=data, auth=auth, headers=headers, json=json
+		response = frappe.flags.integration_request = s.request(
+			method, url, data=data, auth=auth, headers=headers, json=json, params=params
 		)
-		frappe.flags.integration_request.raise_for_status()
+		response.raise_for_status()
 
-		if frappe.flags.integration_request.headers.get("content-type") == "text/plain; charset=utf-8":
-			return parse_qs(frappe.flags.integration_request.text)
-
-		return frappe.flags.integration_request.json()
+		# Check whether the response has a content-type, before trying to check what it is
+		if content_type := response.headers.get("content-type"):
+			if content_type == "text/plain; charset=utf-8":
+				return parse_qs(response.text)
+			elif content_type.startswith("application/") and content_type.split(";")[0].endswith("json"):
+				return response.json()
+			elif response.text:
+				return response.text
+		return
 	except Exception as exc:
 		frappe.log_error()
 		raise exc
@@ -41,6 +45,14 @@ def make_post_request(url, **kwargs):
 
 def make_put_request(url, **kwargs):
 	return make_request("PUT", url, **kwargs)
+
+
+def make_patch_request(url, **kwargs):
+	return make_request("PATCH", url, **kwargs)
+
+
+def make_delete_request(url, **kwargs):
+	return make_request("DELETE", url, **kwargs)
 
 
 def create_request_log(
@@ -99,5 +111,5 @@ def get_json(obj):
 
 
 def json_handler(obj):
-	if isinstance(obj, (datetime.date, datetime.timedelta, datetime.datetime)):
+	if isinstance(obj, datetime.date | datetime.timedelta | datetime.datetime):
 		return str(obj)

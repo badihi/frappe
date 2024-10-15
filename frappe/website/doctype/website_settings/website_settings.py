@@ -56,6 +56,7 @@ class WebsiteSettings(Document):
 		robots_txt: DF.Code | None
 		route_redirects: DF.Table[WebsiteRouteRedirect]
 		show_account_deletion_link: DF.Check
+		show_footer_on_login: DF.Check
 		show_language_picker: DF.Check
 		splash_image: DF.AttachImage | None
 		subdomain: DF.SmallText | None
@@ -64,6 +65,7 @@ class WebsiteSettings(Document):
 		website_theme: DF.Link | None
 		website_theme_image_link: DF.Code | None
 	# end: auto-generated types
+
 	def validate(self):
 		self.validate_top_bar_items()
 		self.validate_footer_items()
@@ -234,7 +236,7 @@ def get_website_settings(context=None):
 	for key in via_hooks:
 		context[key] = via_hooks[key]
 		if key not in ("top_bar_items", "footer_items", "post_login") and isinstance(
-			context[key], (list, tuple)
+			context[key], list | tuple
 		):
 			context[key] = context[key][-1]
 

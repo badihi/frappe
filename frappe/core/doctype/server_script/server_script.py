@@ -8,7 +8,13 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.rate_limiter import rate_limit
-from frappe.utils.safe_exec import NamespaceDict, get_safe_globals, is_safe_exec_enabled, safe_exec
+from frappe.utils.safe_exec import (
+	FrappeTransformer,
+	NamespaceDict,
+	get_safe_globals,
+	is_safe_exec_enabled,
+	safe_exec,
+)
 
 
 class ServerScript(Document):
@@ -30,6 +36,8 @@ class ServerScript(Document):
 			"Before Save",
 			"After Insert",
 			"After Save",
+			"Before Rename",
+			"After Rename",
 			"Before Submit",
 			"After Submit",
 			"Before Cancel",
@@ -38,6 +46,7 @@ class ServerScript(Document):
 			"After Delete",
 			"Before Save (Submitted Document)",
 			"After Save (Submitted Document)",
+			"Before Print",
 			"On Payment Authorization",
 		]
 		enable_rate_limit: DF.Check
@@ -60,6 +69,7 @@ class ServerScript(Document):
 		reference_doctype: DF.Link | None
 		script: DF.Code
 		script_type: DF.Literal["DocType Event", "Scheduler Event", "Permission Query", "API"]
+
 	# end: auto-generated types
 	def validate(self):
 		frappe.only_for("Script Manager", True)
@@ -112,18 +122,19 @@ class ServerScript(Document):
 
 	def clear_scheduled_events(self):
 		"""Deletes existing scheduled jobs by Server Script if self.event_frequency or self.cron_format has changed"""
-		if self.script_type == "Scheduler Event" and (
-			self.has_value_changed("event_frequency") or self.has_value_changed("cron_format")
-		):
+		if (
+			self.script_type == "Scheduler Event"
+			and (self.has_value_changed("event_frequency") or self.has_value_changed("cron_format"))
+		) or (self.has_value_changed("script_type") and self.script_type != "Scheduler Event"):
 			for scheduled_job in self.scheduled_jobs:
-				frappe.delete_doc("Scheduled Job Type", scheduled_job.name)
+				frappe.delete_doc("Scheduled Job Type", scheduled_job.name, delete_permanently=1)
 
 	def check_if_compilable_in_restricted_context(self):
 		"""Check compilation errors and send them back as warnings."""
 		from RestrictedPython import compile_restricted
 
 		try:
-			compile_restricted(self.script)
+			compile_restricted(self.script, policy=FrappeTransformer)
 		except Exception as e:
 			frappe.msgprint(str(e), title=_("Compilation warning"))
 
@@ -155,7 +166,12 @@ class ServerScript(Document):
 		Args:
 		        doc (Document): Executes script with for a certain document's events
 		"""
-		safe_exec(self.script, _locals={"doc": doc}, restrict_commit_rollback=True)
+		safe_exec(
+			self.script,
+			_locals={"doc": doc},
+			restrict_commit_rollback=True,
+			script_filename=self.name,
+		)
 
 	def execute_scheduled_method(self):
 		"""Specific to Scheduled Jobs via Server Scripts
@@ -166,7 +182,7 @@ class ServerScript(Document):
 		if self.script_type != "Scheduler Event":
 			raise frappe.DoesNotExistError
 
-		safe_exec(self.script)
+		safe_exec(self.script, script_filename=self.name)
 
 	def get_permission_query_conditions(self, user: str) -> list[str]:
 		"""Specific to Permission Query Server Scripts
@@ -178,7 +194,7 @@ class ServerScript(Document):
 		        list: Returns list of conditions defined by rules in self.script
 		"""
 		locals = {"user": user, "conditions": ""}
-		safe_exec(self.script, None, locals)
+		safe_exec(self.script, None, locals, script_filename=self.name)
 		if locals["conditions"]:
 			return locals["conditions"]
 
@@ -198,7 +214,7 @@ class ServerScript(Document):
 				if key.startswith("_"):
 					continue
 				value = obj[key]
-				if isinstance(value, (NamespaceDict, dict)) and value:
+				if isinstance(value, NamespaceDict | dict) and value:
 					if key == "form_dict":
 						out.append(["form_dict", 7])
 						continue
@@ -210,7 +226,7 @@ class ServerScript(Document):
 						score = 0
 					elif isinstance(value, ModuleType):
 						score = 10
-					elif isinstance(value, (FunctionType, MethodType)):
+					elif isinstance(value, FunctionType | MethodType):
 						score = 9
 					elif isinstance(value, type):
 						score = 8
@@ -278,7 +294,7 @@ def execute_api_server_script(script=None, *args, **kwargs):
 		raise frappe.PermissionError
 
 	# output can be stored in flags
-	_globals, _locals = safe_exec(script.script)
+	_globals, _locals = safe_exec(script.script, script_filename=script.name)
 
 	return _globals.frappe.flags
 

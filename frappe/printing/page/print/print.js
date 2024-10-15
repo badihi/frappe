@@ -184,13 +184,20 @@ frappe.ui.form.PrintView = class {
 		this.set_breadcrumbs();
 		this.setup_customize_dialog();
 
-		// print format builder beta
-		this.page.add_inner_message(`
-			<a style="line-height: 2.4" href="/app/print-format-builder-beta?doctype=${this.frm.doctype}">
-				${__("Try the new Print Format Builder")}
+		// print designer link
+		if (Object.keys(frappe.boot.versions).includes("print_designer")) {
+			this.page.add_inner_message(`
+			<a style="line-height: 2.4" href="/app/print-designer?doctype=${this.frm.doctype}">
+				${__("Try the new Print Designer")}
 			</a>
-		`);
-
+			`);
+		} else {
+			this.page.add_inner_message(`
+			<a style="line-height: 2.4" href="https://frappecloud.com/marketplace/apps/print_designer?utm_source=framework-desk&utm_medium=print-view&utm_campaign=try-link">
+				${__("Try the new Print Designer")}
+			</a>
+			`);
+		}
 		let tasks = [
 			this.set_default_print_format,
 			this.set_default_print_language,
@@ -420,6 +427,9 @@ frappe.ui.form.PrintView = class {
 			params.append("letterhead", letterhead);
 		}
 		iframe.prop("src", `/printpreview?${params.toString()}`);
+		setTimeout(() => {
+			iframe.css("height", "calc(100vh - var(--page-head-height) - var(--navbar-height))");
+		}, 500);
 	}
 
 	setup_print_format_dom(out, $print_format) {
@@ -596,7 +606,24 @@ frappe.ui.form.PrintView = class {
 			},
 		});
 	}
-
+	async is_wkhtmltopdf_valid() {
+		const is_valid = await frappe.xcall("frappe.utils.pdf.is_wkhtmltopdf_valid");
+		// function returns true or false
+		if (is_valid) return;
+		frappe.msgprint({
+			title: __("Invalid wkhtmltopdf version"),
+			message:
+				__("PDF generation may not work as expected.") +
+				"<hr/>" +
+				__("Please contact your system manager to install correct version.") +
+				"<br/>" +
+				__("Correct version :") +
+				" <b><a href ='https://wkhtmltopdf.org/downloads.html'>" +
+				__("wkhtmltopdf 0.12.x (with patched qt).") +
+				"</a></b>",
+			indicator: "red",
+		});
+	}
 	render_pdf() {
 		let print_format = this.get_print_format();
 		if (print_format.print_format_builder_beta) {
@@ -612,6 +639,7 @@ frappe.ui.form.PrintView = class {
 				return;
 			}
 		} else {
+			this.is_wkhtmltopdf_valid();
 			this.render_page("/api/method/frappe.utils.print_format.download_pdf?");
 		}
 	}

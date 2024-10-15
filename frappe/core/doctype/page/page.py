@@ -31,6 +31,7 @@ class Page(Document):
 		standard: DF.Literal["Yes", "No"]
 		system_page: DF.Check
 		title: DF.Data | None
+
 	# end: auto-generated types
 	def autoname(self):
 		"""
@@ -86,14 +87,13 @@ class Page(Document):
 			if not os.path.exists(path + ".js"):
 				with open(path + ".js", "w") as f:
 					f.write(
-						"""frappe.pages['%s'].on_page_load = function(wrapper) {
-	var page = frappe.ui.make_app_page({
+						f"""frappe.pages['{self.name}'].on_page_load = function(wrapper) {{
+	var page = frappe.ui.make_app_page({{
 		parent: wrapper,
-		title: '%s',
+		title: '{self.title}',
 		single_column: true
-	});
-}"""
-						% (self.name, self.title)
+	}});
+}}"""
 					)
 
 	def as_dict(self, no_nulls=False):
@@ -109,9 +109,7 @@ class Page(Document):
 		"""Returns true if Has Role is not set or the user is allowed."""
 		from frappe.utils import has_common
 
-		allowed = [
-			d.role for d in frappe.get_all("Has Role", fields=["role"], filters={"parent": self.name})
-		]
+		allowed = [d.role for d in frappe.get_all("Has Role", fields=["role"], filters={"parent": self.name})]
 
 		custom_roles = get_custom_allowed_roles("page", self.name)
 		allowed.extend(custom_roles)
@@ -158,7 +156,9 @@ class Page(Document):
 						try:
 							out = frappe.get_attr(
 								"{app}.{module}.page.{page}.{page}.get_context".format(
-									app=frappe.local.module_app[scrub(self.module)], module=scrub(self.module), page=page_name
+									app=frappe.local.module_app[scrub(self.module)],
+									module=scrub(self.module),
+									page=page_name,
 								)
 							)(context)
 
@@ -172,11 +172,6 @@ class Page(Document):
 
 					# flag for not caching this page
 					self._dynamic_page = True
-
-		if frappe.lang != "en":
-			from frappe.translate import get_lang_js
-
-			self.script += get_lang_js("page", self.name)
 
 		for path in get_code_files_via_hooks("page_js", self.name):
 			js = get_js(path)

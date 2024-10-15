@@ -7,6 +7,7 @@ import responses
 from responses.matchers import json_params_matcher
 
 import frappe
+from frappe.integrations.doctype.webhook import flush_webhook_execution_queue
 from frappe.integrations.doctype.webhook.webhook import (
 	enqueue_webhook,
 	get_webhook_data,
@@ -70,10 +71,14 @@ class TestWebhook(FrappeTestCase):
 	@classmethod
 	def tearDownClass(cls):
 		# delete any existing webhooks
+		frappe.db.rollback()
 		frappe.db.delete("Webhook")
+		frappe.db.commit()
 
 	def setUp(self):
 		# retrieve or create a User webhook for `after_insert`
+		self.responses = responses.RequestsMock()
+		self.responses.start()
 		webhook_fields = {
 			"webhook_doctype": "User",
 			"webhook_docevent": "after_insert",
@@ -96,9 +101,7 @@ class TestWebhook(FrappeTestCase):
 		self.test_user = frappe.new_doc("User")
 		self.test_user.email = "user1@integration.webhooks.test.com"
 		self.test_user.first_name = "user1"
-
-		self.responses = responses.RequestsMock()
-		self.responses.start()
+		self.test_user.send_welcome_email = False
 
 	def tearDown(self) -> None:
 		self.user.delete()
@@ -112,18 +115,19 @@ class TestWebhook(FrappeTestCase):
 		"""Test webhook trigger for enabled webhooks"""
 
 		frappe.cache.delete_value("webhooks")
-		frappe.flags.webhooks = None
 
 		# Insert the user to db
 		self.test_user.insert()
 
-		self.assertTrue("User" in frappe.flags.webhooks)
+		webhooks = frappe.cache.get_value("webhooks")
+		self.assertTrue("User" in webhooks)
+		self.assertEqual(len(webhooks.get("User")), 1)
+
 		# only 1 hook (enabled) must be queued
-		self.assertEqual(len(frappe.flags.webhooks.get("User")), 1)
-		self.assertTrue(self.test_user.email in frappe.flags.webhooks_executed)
-		self.assertEqual(
-			frappe.flags.webhooks_executed.get(self.test_user.email)[0], self.sample_webhooks[0].name
-		)
+		self.assertEqual(len(frappe.local._webhook_queue), 1)
+		execution = frappe.local._webhook_queue[0]
+		self.assertEqual(execution.webhook.name, self.sample_webhooks[0].name)
+		self.assertEqual(execution.doc.name, self.test_user.name)
 
 	def test_validate_doc_events(self):
 		"Test creating a submit-related webhook for a non-submittable DocType"
@@ -201,12 +205,11 @@ class TestWebhook(FrappeTestCase):
 		self.assertTrue(frappe.get_all("Webhook Request Log", pluck="name"))
 
 	def test_webhook_with_array_body(self):
-
 		"""Check if array request body are supported."""
 		wh_config = {
 			"doctype": "Webhook",
 			"webhook_doctype": "Note",
-			"webhook_docevent": "after_insert",
+			"webhook_docevent": "on_change",
 			"enabled": 1,
 			"request_url": "https://httpbin.org/post",
 			"request_method": "POST",
@@ -223,8 +226,9 @@ class TestWebhook(FrappeTestCase):
 
 		doc = frappe.new_doc("Note")
 		doc.title = "Test Webhook Note"
+		final_title = frappe.generate_hash()
 
-		expected_req = [{"title": doc.title} for _ in range(3)]
+		expected_req = [{"title": final_title} for _ in range(3)]
 		self.responses.add(
 			responses.POST,
 			"https://httpbin.org/post",
@@ -233,8 +237,15 @@ class TestWebhook(FrappeTestCase):
 			match=[json_params_matcher(expected_req)],
 		)
 
-		with get_test_webhook(wh_config) as wh:
-			enqueue_webhook(doc, wh)
+		with get_test_webhook(wh_config):
+			# It should only execute once in a transaction
+			doc.insert()
+			doc.reload()
+			doc.save()
+			doc = frappe.get_doc(doc.doctype, doc.name)
+			doc.title = final_title
+			doc.save()
+			flush_webhook_execution_queue()
 			log = frappe.get_last_doc("Webhook Request Log")
 			self.assertEqual(len(json.loads(log.response)), 3)
 

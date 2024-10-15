@@ -63,7 +63,6 @@ frappe.ui.form.ControlAttach = class ControlAttach extends frappe.ui.form.Contro
 	on_attach_doc_image() {
 		this.set_upload_options();
 		this.upload_options.restrictions.allowed_file_types = ["image/*"];
-		this.upload_options.restrictions.crop_image_aspect_ratio = 1;
 		this.file_uploader = new frappe.ui.FileUploader(this.upload_options);
 	}
 	set_upload_options() {
@@ -80,7 +79,9 @@ frappe.ui.form.ControlAttach = class ControlAttach extends frappe.ui.form.Contro
 			options.doctype = this.frm.doctype;
 			options.docname = this.frm.docname;
 			options.fieldname = this.df.fieldname;
-			options.make_attachments_public = this.frm.meta.make_attachments_public;
+			options.make_attachments_public = this.df.make_attachment_public
+				? 1
+				: this.frm.meta.make_attachments_public;
 		}
 
 		if (this.df.options) {
