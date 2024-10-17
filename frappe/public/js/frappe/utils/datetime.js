@@ -288,7 +288,14 @@ $.extend(frappe.datetime, {
 	validate: function (d) {
 		return moment(
 			d,
-			[this.fixDateFormatForCalendar(frappe.defaultDateFormat), this.fixDateFormatForCalendar(frappe.defaultDatetimeFormat), this.fixDateFormatForCalendar(frappe.defaultTimeFormat)],
+			[
+				this.fixDateFormatForCalendar(frappe.defaultDateFormat),
+				this.fixDateFormatForCalendar(frappe.defaultDatetimeFormat),
+				this.fixDateFormatForCalendar(frappe.defaultTimeFormat),
+				frappe.defaultDateFormat,
+				frappe.defaultDatetimeFormat,
+				frappe.defaultTimeFormat,
+			],
 			true
 		).isValid();
 	},
