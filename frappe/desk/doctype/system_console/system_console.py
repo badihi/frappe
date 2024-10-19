@@ -22,13 +22,14 @@ class SystemConsole(Document):
 		output: DF.Code | None
 		show_processlist: DF.Check
 		type: DF.Literal["Python", "SQL"]
+
 	# end: auto-generated types
 	def run(self):
 		frappe.only_for("System Manager")
 		try:
 			frappe.local.debug_log = []
 			if self.type == "Python":
-				safe_exec(self.console)
+				safe_exec(self.console, script_filename="System Console")
 				self.output = "\n".join(frappe.debug_log)
 			elif self.type == "SQL":
 				self.output = frappe.as_json(read_sql(self.console, as_dict=1))

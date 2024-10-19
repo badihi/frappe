@@ -3,9 +3,10 @@
 
 frappe.ui.form.on("DocType", {
 	onload: function (frm) {
-		if (frm.is_new()) {
+		if (frm.is_new() && !frm.doc?.fields) {
 			frappe.listview_settings["DocType"].new_doctype_dialog();
 		}
+		frm.call("check_pending_migration");
 	},
 
 	before_save: function (frm) {

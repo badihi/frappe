@@ -32,7 +32,7 @@
 			cursor: pointer;
 			margin-bottom: 0px;
 			margin-right: var(--margin-sm);
-			max-width: 48vw;
+			max-width: 25vw;
 		}
 		.indicator-pill {
 			margin-top: 2px;
@@ -114,7 +114,7 @@ html[dir=rtl] .prev-doc svg, html[dir=rtl] .next-doc svg {
 
 .page-form {
 	margin: 0;
-	padding: var(--padding-sm);
+	padding: var(--padding-xs);
 	display: flex;
 	flex-wrap: wrap;
 	background-color: var(--card-bg);
@@ -167,6 +167,8 @@ html[dir=rtl] .prev-doc svg, html[dir=rtl] .next-doc svg {
 	}
 }
 .layout-main-section {
+	scroll-margin-top: var(--navbar-height);
+
 	.frappe-list,
 	.report-wrapper {
 		padding: 0 var(--padding-xs);

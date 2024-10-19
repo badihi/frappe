@@ -53,7 +53,6 @@ frappe.provide("frappe.views");
 				var state = context.state;
 				var _cards = cards
 					.map((card) => prepare_card(card, state))
-					.concat(state.cards)
 					.uniqBy((card) => card.name);
 
 				context.commit("update_state", {
@@ -303,7 +302,7 @@ frappe.provide("frappe.views");
 			// update cards internally
 			opts.cards = cards;
 
-			if (self.wrapper.find(".kanban").length > 0 && self.cur_list.start !== 0) {
+			if (self.wrapper.find(".kanban").length > 0) {
 				store.dispatch("update_cards", cards);
 			} else {
 				init();
@@ -731,7 +730,9 @@ frappe.provide("frappe.views");
 				let field =
 					frappe.meta.docfield_map[card.doctype]?.[field_name] ||
 					frappe.model.get_std_field(field_name);
-				let label = cur_list.board.show_labels ? `<span>${__(field.label)}: </span>` : "";
+				let label = cur_list.board.show_labels
+					? `<span>${__(field.label, null, field.parent)}: </span>`
+					: "";
 				let value = frappe.format(card.doc[field_name], field);
 				fields.push(`
 					<div class="text-muted text-truncate">

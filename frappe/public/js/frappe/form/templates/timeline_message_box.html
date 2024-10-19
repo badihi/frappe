@@ -23,31 +23,36 @@
 					{% } %}
 
 					<div class="text-muted">
-						{{ comment_when(doc.creation) }}
+						{{ comment_when(doc.communication_date || doc.creation) }}
 					</div>
 				</span>
 			{% } else if (doc.comment_type && doc.comment_type == "Comment") { %}
 				<span>
 					{{ frappe.avatar(doc.owner, "avatar-medium") }}
 					<span class="ml-2" style="font-size: var(--text-base);">{{ doc.user_full_name || frappe.user.full_name(doc.owner) }}</span>
-					<span style="color: var(--text-muted);">{{ __("commented") }}</span>
-					<span class="margin-left" style="color: var(--text-muted);">
-						{{ comment_when(doc.creation) }}
+					<span class="text-muted">{{ __("commented") }}</span>
+					<span> . </span>
+					<span class="margin-left text-muted">
+						{{ comment_when(doc.communication_date || doc.creation) }}
 					</span>
 				</span>
 			{% } else { %}
 				<span class="margin-right">
 					{{ frappe.avatar(doc.owner, "avatar-medium") }}
 				</span>
-				<span>
+				<div>
 					{{ doc.user_full_name || frappe.user.full_name(doc.owner) }}
-					<div class="text-muted">
-						{{ comment_when(doc.creation) }}
-					</div>
-				</span>
+					<span> . </span>
+					<span class="text-muted">
+						{{ comment_when(doc.communication_date || doc.creation) }}
+					</span>
+					{% if (doc.subject) { %}
+						<div class="text-muted my-1">{{doc.subject}}</div>
+					{% } %}
+				</div>
 			{% } %}
 		</span>
-		<span class="actions">
+		<span class="actions" style="flex-shrink: 0">
 			{% if (doc._doc_status && doc._doc_status_indicator) { %}
 			<span class="indicator-pill {%= doc._doc_status_indicator %}"
 				title="{%= __(doc._doc_status) %}"

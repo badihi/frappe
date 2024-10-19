@@ -1,10 +1,13 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: MIT. See LICENSE
+import contextlib
 
 # imports - standard imports
 import gzip
 import os
+import sys
 from calendar import timegm
+from collections.abc import Callable
 from datetime import datetime
 from glob import glob
 from shutil import which
@@ -16,7 +19,7 @@ from cryptography.fernet import Fernet
 # imports - module imports
 import frappe
 import frappe.utils
-from frappe import conf
+from frappe import _, conf
 from frappe.utils import cint, get_file_size, get_url, now, now_datetime
 
 # backup variable for backwards compatibility
@@ -54,6 +57,8 @@ class BackupGenerator:
 		include_doctypes="",
 		exclude_doctypes="",
 		verbose=False,
+		old_backup_metadata=False,
+		rollback_callback=None,
 	):
 		global _verbose
 		self.compress_files = compress_files or compress
@@ -72,6 +77,8 @@ class BackupGenerator:
 		self.include_doctypes = include_doctypes
 		self.exclude_doctypes = exclude_doctypes
 		self.partial = False
+		self.old_backup_metadata = old_backup_metadata
+		self.rollback_callback = rollback_callback
 
 		site = frappe.local.site or frappe.generate_hash(length=8)
 		self.site_slug = site.replace(".", "_")
@@ -183,10 +190,12 @@ class BackupGenerator:
 			self.set_backup_file_name()
 
 		if not (last_db and last_file and last_private_file and site_config_backup_path):
-			self.take_dump()
-			self.copy_site_config()
+			self.delete_if_step_fails(self.take_dump, self.backup_path_db)
+			self.delete_if_step_fails(self.copy_site_config, self.backup_path_conf)
 			if not ignore_files:
-				self.backup_files()
+				self.delete_if_step_fails(
+					self.backup_files, self.backup_path_files, self.backup_path_private_files
+				)
 
 			if frappe.get_system_settings("encrypt_backup"):
 				self.backup_encryption()
@@ -222,6 +231,9 @@ class BackupGenerator:
 		"""
 		Encrypt all the backups created using gpg.
 		"""
+		if which("gpg") is None:
+			click.secho("Please install `gpg` and ensure its available in your PATH", fg="red")
+			sys.exit(1)
 		paths = (self.backup_path_db, self.backup_path_files, self.backup_path_private_files)
 		for path in paths:
 			if os.path.exists(path):
@@ -243,21 +255,19 @@ class BackupGenerator:
 
 	def get_recent_backup(self, older_than, partial=False):
 		backup_path = get_backup_path()
+		separator = suffix = ""
+		if partial:
+			separator = "*"
 
-		if not frappe.get_system_settings("encrypt_backup"):
-			file_type_slugs = {
-				"database": "*-{{}}-{}database.sql.gz".format("*" if partial else ""),
-				"public": "*-{}-files.tar",
-				"private": "*-{}-private-files.tar",
-				"config": "*-{}-site_config_backup.json",
-			}
-		else:
-			file_type_slugs = {
-				"database": "*-{{}}-{}database.enc.sql.gz".format("*" if partial else ""),
-				"public": "*-{}-files.enc.tar",
-				"private": "*-{}-private-files.enc.tar",
-				"config": "*-{}-site_config_backup.json",
-			}
+		if frappe.get_system_settings("encrypt_backup"):
+			suffix = "-enc"
+
+		file_type_slugs = {
+			"database": f"*-{{}}-{separator}database{suffix}.sql.gz",
+			"public": f"*-{{}}-files{suffix}.tar",
+			"private": f"*-{{}}-private-files{suffix}.tar",
+			"config": f"*-{{}}-site_config_backup{suffix}.json",
+		}
 
 		def backup_time(file_path):
 			file_name = file_path.split(os.sep)[-1]
@@ -276,13 +286,9 @@ class BackupGenerator:
 					return None
 				return file_path
 
-		latest_backups = {
-			file_type: get_latest(pattern) for file_type, pattern in file_type_slugs.items()
-		}
+		latest_backups = {file_type: get_latest(pattern) for file_type, pattern in file_type_slugs.items()}
 
-		recent_backups = {
-			file_type: old_enough(file_name) for file_type, file_name in latest_backups.items()
-		}
+		recent_backups = {file_type: old_enough(file_name) for file_type, file_name in latest_backups.items()}
 
 		return (
 			recent_backups.get("database"),
@@ -344,16 +350,25 @@ class BackupGenerator:
 			backup_path = self.backup_path_files if folder == "public" else self.backup_path_private_files
 
 			if self.compress_files:
-				cmd_string = "self=$$; ( tar cf - {1} || kill $self ) | gzip > {0}"
+				cmd_string = "set -o pipefail; tar cf - {1} | gzip > {0}"
 			else:
 				cmd_string = "tar -cf {0} {1}"
 
-			frappe.utils.execute_in_shell(
-				cmd_string.format(backup_path, files_path),
-				verbose=self.verbose,
-				low_priority=True,
-				check_exit_code=True,
-			)
+			try:
+				frappe.utils.execute_in_shell(
+					cmd_string.format(backup_path, files_path),
+					verbose=self.verbose,
+					low_priority=True,
+					check_exit_code=True,
+				)
+			except frappe.CommandFailedError as e:
+				if e.err and "file changed as we read it" in e.err:
+					click.secho(
+						"Ignoring `tar: file changed as we read it` to prevent backup failure",
+						fg="red",
+					)
+				else:
+					raise e
 
 	def copy_site_config(self):
 		site_config_backup_path = self.backup_path_conf
@@ -362,48 +377,32 @@ class BackupGenerator:
 		with open(site_config_backup_path, "w") as n, open(site_config_path) as c:
 			n.write(c.read())
 
-	def get_db_dump_exeuctable(self) -> str:
-		db_exc, exists = None, False
-
-		if self.db_type == "mariadb":
-			if mariadb_dump_path := which("mariadb-dump"):
-				exists = bool(mariadb_dump_path)
-				db_exc = "mariadb-dump"
-			else:
-				# Fallback to mysqldump if mariadb-dump is not available.
-				db_exc = "mysqldump"
-				exists = bool(which(db_exc))
-		elif self.db_type == "postgres":
-			db_exc = "pg_dump"
-			exists = bool(which(db_exc))
-
-		if not exists:
-			frappe.throw(
-				f"{db_exc} not found in PATH! This is required to take a backup.",
-				exc=frappe.ExecutableNotFound,
-			)
-		return db_exc
-
 	def take_dump(self):
+		import shlex
+
 		import frappe.utils
 		from frappe.utils.change_log import get_app_branch
 
-		db_exc = self.get_db_dump_exeuctable()
 		gzip_exc = which("gzip")
 		if not gzip_exc:
 			frappe.throw(
-				"`gzip` not found in PATH! This is required to take a backup.", exc=frappe.ExecutableNotFound
+				_("gzip not found in PATH! This is required to take a backup."), exc=frappe.ExecutableNotFound
 			)
 
-		database_header_content = [
-			f"Backup generated by Frappe {frappe.__version__} on branch {get_app_branch('frappe') or 'N/A'}",
-			"",
-		]
-
-		# escape reserved characters
-		args = frappe._dict(
-			[item[0], frappe.utils.esc(str(item[1]), "$ ")] for item in self.__dict__.copy().items()
-		)
+		if self.old_backup_metadata:
+			database_header_content = [
+				f"Backup generated by Frappe {frappe.__version__} on branch {get_app_branch('frappe') or 'N/A'}",
+				"",
+			]
+		else:
+			database_header_content = [
+				"begin frappe metadata",
+				"[frappe]",
+				f"version = {frappe.__version__}",
+				f"branch = {get_app_branch('frappe') or 'N/A'}",
+				"end frappe metadata",
+				"",
+			]
 
 		if self.backup_includes:
 			backup_info = ("Backing Up Tables: ", ", ".join(self.backup_includes))
@@ -423,54 +422,45 @@ class BackupGenerator:
 
 		generated_header = "\n".join(f"-- {x}" for x in database_header_content) + "\n"
 
-		with gzip.open(args.backup_path_db, "wt") as f:
+		with gzip.open(self.backup_path_db, "wt") as f:
 			f.write(generated_header)
 
-		if self.db_type == "postgres":
+		cmd = []
+		extra = []
+		if self.db_type == "mariadb":
 			if self.backup_includes:
-				args["include"] = " ".join([f"--table='public.\"{table}\"'" for table in self.backup_includes])
+				extra.extend(self.backup_includes)
 			elif self.backup_excludes:
-				args["exclude"] = " ".join(
-					[f"--exclude-table-data='public.\"{table}\"'" for table in self.backup_excludes]
-				)
+				extra.extend([f"--ignore-table={self.db_name}.{table}" for table in self.backup_excludes])
 
-			cmd_string = (
-				"self=$$; "
-				"( {db_exc} postgres://{user}:{password}@{db_host}:{db_port}/{db_name}"
-				" {include} {exclude} || kill $self ) | {gzip} >> {backup_path_db}"
-			)
-
-		else:
+		elif self.db_type == "postgres":
 			if self.backup_includes:
-				args["include"] = " ".join([f"'{x}'" for x in self.backup_includes])
+				extra.extend([f'--table=public."{table}"' for table in self.backup_includes])
 			elif self.backup_excludes:
-				args["exclude"] = " ".join(
-					[f"--ignore-table='{self.db_name}.{table}'" for table in self.backup_excludes]
-				)
+				extra.extend([f'--exclude-table-data=public."{table}"' for table in self.backup_excludes])
 
-			cmd_string = (
-				# Remember process of this shell and kill it if mysqldump exits w/ non-zero code
-				"self=$$; "
-				" ( {db_exc} --single-transaction --quick --lock-tables=false -u {user}"
-				" -p{password} {db_name} -h {db_host} -P {db_port} {include} {exclude} || kill $self ) "
-				" | {gzip} >> {backup_path_db}"
-			)
+		from frappe.database import get_command
 
-		command = cmd_string.format(
-			user=args.user,
-			password=args.password,
-			db_exc=db_exc,
-			db_host=args.db_host,
-			db_port=args.db_port,
-			db_name=args.db_name,
-			backup_path_db=args.backup_path_db,
-			exclude=args.get("exclude", ""),
-			include=args.get("include", ""),
-			gzip=gzip_exc,
+		bin, args, bin_name = get_command(
+			host=self.db_host,
+			port=self.db_port,
+			user=self.user,
+			password=self.password,
+			db_name=self.db_name,
+			extra=extra,
+			dump=True,
 		)
+		if not bin:
+			frappe.throw(
+				_("{} not found in PATH! This is required to take a backup.").format(bin_name),
+				exc=frappe.ExecutableNotFound,
+			)
+		cmd.append(bin)
+		cmd.append(shlex.join(args))
 
+		command = " ".join(["set -o pipefail;", *cmd, "|", gzip_exc, ">>", self.backup_path_db])
 		if self.verbose:
-			print(command.replace(args.password, "*" * 10) + "\n")
+			print(command.replace(shlex.quote(self.password), "*" * 10) + "\n")
 
 		frappe.utils.execute_in_shell(command, low_priority=True, check_exit_code=True)
 
@@ -484,7 +474,7 @@ class BackupGenerator:
 		db_backup_url = get_url(os.path.join("backups", os.path.basename(self.backup_path_db)))
 		files_backup_url = get_url(os.path.join("backups", os.path.basename(self.backup_path_files)))
 
-		msg = """Hello,
+		msg = f"""Hello,
 
 Your backups are ready to be downloaded.
 
@@ -492,16 +482,41 @@ Your backups are ready to be downloaded.
 2. [Click here to download the files backup]({files_backup_url})
 
 This link will be valid for 24 hours. A new backup will be available for
-download only after 24 hours.""".format(
-			db_backup_url=db_backup_url,
-			files_backup_url=files_backup_url,
-		)
+download only after 24 hours."""
 
 		datetime_str = datetime.fromtimestamp(os.stat(self.backup_path_db).st_ctime)
 		subject = datetime_str.strftime("%d/%m/%Y %H:%M:%S") + """ - Backup ready to be downloaded"""
 
 		frappe.sendmail(recipients=recipient_list, message=msg, subject=subject)
 		return recipient_list
+
+	def add_to_rollback(self, func: Callable) -> None:
+		"""
+		Adds the given callable to the rollback CallbackManager stack
+
+		:param func: The callable to add to the rollback stack
+		:return: Nothing
+		"""
+		if self.rollback_callback:
+			self.rollback_callback.add(func)
+
+	def delete_if_step_fails(self, step: Callable, *paths: str):
+		"""
+		Deletes the given path if the given step fails
+
+		:param step: The step to execute
+		:param paths: The paths to delete
+		:return: Nothing
+		"""
+		try:
+			step()
+		except Exception as e:
+			for path in paths:
+				if os.path.exists(path):
+					os.remove(path)
+			raise e
+		for path in paths:
+			self.add_to_rollback(lambda: os.remove(path))
 
 
 @frappe.whitelist()
@@ -540,6 +555,8 @@ def scheduled_backup(
 	compress=False,
 	force=False,
 	verbose=False,
+	old_backup_metadata=False,
+	rollback_callback=None,
 ):
 	"""this function is called from scheduler
 	deletes backups older than 7 days
@@ -558,6 +575,8 @@ def scheduled_backup(
 		compress=compress,
 		force=force,
 		verbose=verbose,
+		old_backup_metadata=old_backup_metadata,
+		rollback_callback=rollback_callback,
 	)
 
 
@@ -575,6 +594,8 @@ def new_backup(
 	compress=False,
 	force=False,
 	verbose=False,
+	old_backup_metadata=False,
+	rollback_callback=None,
 ):
 	delete_temp_backups()
 	odb = BackupGenerator(
@@ -594,6 +615,8 @@ def new_backup(
 		exclude_doctypes=exclude_doctypes,
 		verbose=verbose,
 		compress_files=compress,
+		old_backup_metadata=old_backup_metadata,
+		rollback_callback=rollback_callback,
 	)
 	odb.get_backup(older_than, ignore_files, force=force)
 	return odb
@@ -662,43 +685,34 @@ def get_or_generate_backup_encryption_key():
 	return key
 
 
-class Backup:
-	def __init__(self, file_path):
-		self.file_path = file_path
+@contextlib.contextmanager
+def decrypt_backup(file_path: str, passphrase: str):
+	if which("gpg") is None:
+		click.secho("Please install `gpg` and ensure its available in your PATH", fg="red")
+		sys.exit(1)
+	if not os.path.exists(file_path):
+		print("Invalid path: ", file_path)
+		return
+	else:
+		file_path_with_ext = file_path + ".gpg"
+		os.rename(file_path, file_path_with_ext)
 
-	def backup_decryption(self, passphrase):
-		"""
-		Decrypts backup at the given path using the passphrase.
-		"""
-		if not os.path.exists(self.file_path):
-			print("Invalid path", self.file_path)
-			return
-		else:
-			file_path_with_ext = self.file_path + ".gpg"
-			os.rename(self.file_path, file_path_with_ext)
-
-			cmd_string = "gpg --yes --passphrase {passphrase} --pinentry-mode loopback -o {decrypted_file} -d {file_location}"
-			command = cmd_string.format(
-				passphrase=passphrase,
-				file_location=file_path_with_ext,
-				decrypted_file=self.file_path,
-			)
-		frappe.utils.execute_in_shell(command)
-
-	def decryption_rollback(self):
-		"""
-		Checks if the decrypted file exists at the given path.
-		if exists
-		        Renames the orginal encrypted file.
-		else
-		        Removes the decrypted file and rename the original file.
-		"""
-		if os.path.exists(self.file_path + ".gpg"):
-			if os.path.exists(self.file_path):
-				os.remove(self.file_path)
-			if os.path.exists(self.file_path.rstrip(".gz")):
-				os.remove(self.file_path.rstrip(".gz"))
-			os.rename(self.file_path + ".gpg", self.file_path)
+		cmd_string = "gpg --yes --passphrase {passphrase} --pinentry-mode loopback -o {decrypted_file} -d {file_location}"
+		command = cmd_string.format(
+			passphrase=passphrase,
+			file_location=file_path_with_ext,
+			decrypted_file=file_path,
+		)
+	frappe.utils.execute_in_shell(command)
+	try:
+		yield
+	finally:
+		if os.path.exists(file_path_with_ext):
+			if os.path.exists(file_path):
+				os.remove(file_path)
+			if os.path.exists(file_path.rstrip(".gz")):
+				os.remove(file_path.rstrip(".gz"))
+			os.rename(file_path_with_ext, file_path)
 
 
 def backup(
@@ -707,7 +721,6 @@ def backup(
 	backup_path_files=None,
 	backup_path_private_files=None,
 	backup_path_conf=None,
-	quiet=False,
 ):
 	"Backup"
 	odb = scheduled_backup(

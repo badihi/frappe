@@ -33,9 +33,7 @@ class TestScheduledJobType(FrappeTestCase):
 		# check if jobs are synced after change in hooks
 		updated_scheduler_events = {"hourly": ["frappe.email.queue.flush"]}
 		sync_jobs(updated_scheduler_events)
-		updated_scheduled_job = frappe.get_doc(
-			"Scheduled Job Type", {"method": "frappe.email.queue.flush"}
-		)
+		updated_scheduled_job = frappe.get_doc("Scheduled Job Type", {"method": "frappe.email.queue.flush"})
 		self.assertEqual(updated_scheduled_job.frequency, "Hourly")
 
 	def test_daily_job(self):
@@ -53,7 +51,7 @@ class TestScheduledJobType(FrappeTestCase):
 			dict(method="frappe.social.doctype.energy_point_log.energy_point_log.send_weekly_summary"),
 		)
 		job.db_set("last_execution", "2019-01-01 00:00:00")
-		self.assertTrue(job.is_event_due(get_datetime("2019-01-06 00:00:01")))
+		self.assertTrue(job.is_event_due(get_datetime("2019-01-06 00:10:01")))  # +10 min because of jitter
 		self.assertFalse(job.is_event_due(get_datetime("2019-01-02 00:00:06")))
 		self.assertFalse(job.is_event_due(get_datetime("2019-01-05 23:59:59")))
 

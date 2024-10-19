@@ -1,5 +1,4 @@
 @import "../common/form.scss";
-@import "~cropperjs/dist/cropper.min";
 
 .tooltip-content {
 	position: absolute;
@@ -216,7 +215,7 @@
 			background-color: var(--gray-100);
 			font-size: var(--text-xs);
 			padding: 0 var(--padding-sm);
-			color: var(--indicator-red);
+			color: var(--gray-700);
 			border-radius: var(--border-radius);
 			cursor: pointer;
 		}
@@ -420,7 +419,12 @@
 	border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
 
 	.form-tabs {
+		flex-wrap: nowrap;
+		overflow: overlay;
+		align-items: center;
+
 		.nav-item {
+			white-space: nowrap;
 			@include get_textstyle("base", "regular");
 			.nav-link {
 				color: var(--text-muted);

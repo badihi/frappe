@@ -11,27 +11,29 @@ from oauthlib.openid import RequestValidator
 
 import frappe
 from frappe.auth import LoginManager
-from frappe.utils.data import get_system_timezone, now_datetime
+from frappe.utils.data import cstr, get_system_timezone, now_datetime
 
 
 class OAuthWebRequestValidator(RequestValidator):
-
 	# Pre- and post-authorization.
 	def validate_client_id(self, client_id, request, *args, **kwargs):
 		# Simple validity check, does client exist? Not banned?
 		cli_id = frappe.db.get_value("OAuth Client", {"name": client_id})
 		if cli_id:
-			request.client = frappe.get_doc("OAuth Client", client_id).as_dict()
-			return True
-		else:
-			return False
+			client = frappe.get_doc("OAuth Client", client_id)
+			if client.user_has_allowed_role():
+				request.client = client.as_dict()
+				return True
+		return False
 
 	def validate_redirect_uri(self, client_id, redirect_uri, request, *args, **kwargs):
 		# Is the client allowed to use the supplied redirect_uri? i.e. has
 		# the client previously registered this EXACT redirect uri.
 
-		redirect_uris = frappe.db.get_value("OAuth Client", client_id, "redirect_uris").split(
-			get_url_delimiter()
+		redirect_uris = (
+			cstr(frappe.db.get_value("OAuth Client", client_id, "redirect_uris"))
+			.strip()
+			.split(get_url_delimiter())
 		)
 
 		if redirect_uri in redirect_uris:
@@ -73,7 +75,6 @@ class OAuthWebRequestValidator(RequestValidator):
 	# Post-authorization
 
 	def save_authorization_code(self, client_id, code, request, *args, **kwargs):
-
 		cookie_dict = get_cookie_dict_from_headers(request)
 
 		oac = frappe.new_doc("OAuth Authorization Code")
@@ -295,9 +296,7 @@ class OAuthWebRequestValidator(RequestValidator):
 		- Refresh Token Grant
 		"""
 
-		otoken = frappe.get_doc(
-			"OAuth Bearer Token", {"refresh_token": refresh_token, "status": "Active"}
-		)
+		otoken = frappe.get_doc("OAuth Bearer Token", {"refresh_token": refresh_token, "status": "Active"})
 
 		if not otoken:
 			return False
@@ -398,9 +397,9 @@ class OAuthWebRequestValidator(RequestValidator):
 		- OpenIDConnectHybrid
 		"""
 		if request.prompt == "login":
-			False
+			return False
 		else:
-			True
+			return True
 
 	def validate_silent_login(self, request):
 		"""Ensure session user has authorized silent OpenID login.

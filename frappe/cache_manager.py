@@ -26,7 +26,9 @@ global_cache_keys = (
 	"installed_apps",
 	"all_apps",
 	"app_modules",
+	"installed_app_modules",
 	"module_app",
+	"module_installed_app",
 	"system_settings",
 	"scheduler_events",
 	"time_zone",
@@ -39,10 +41,10 @@ global_cache_keys = (
 	"domain_restricted_doctypes",
 	"domain_restricted_pages",
 	"information_schema:counts",
-	"sitemap_routes",
 	"db_tables",
 	"server_script_autocompletion_items",
-) + doctype_map_keys
+	*doctype_map_keys,
+)
 
 user_cache_keys = (
 	"bootinfo",
@@ -111,7 +113,7 @@ def clear_global_cache():
 
 def clear_defaults_cache(user=None):
 	if user:
-		for p in [user] + common_default_keys:
+		for p in [user, *common_default_keys]:
 			frappe.cache.hdel("defaults", p)
 	elif frappe.flags.in_install != "frappe":
 		frappe.cache.delete_key("defaults")
@@ -198,9 +200,7 @@ def build_table_count_cache():
 	table_rows = frappe.qb.Field("table_rows").as_("count")
 	information_schema = frappe.qb.Schema("information_schema")
 
-	data = (frappe.qb.from_(information_schema.tables).select(table_name, table_rows)).run(
-		as_dict=True
-	)
+	data = (frappe.qb.from_(information_schema.tables).select(table_name, table_rows)).run(as_dict=True)
 	counts = {d.get("name").replace("tab", "", 1): d.get("count", None) for d in data}
 	frappe.cache.set_value("information_schema:counts", counts)
 
