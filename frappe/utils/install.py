@@ -197,7 +197,7 @@ def add_standard_navbar_items():
 	# don't add settings/help options if they're already present
 	if navbar_settings.settings_dropdown and navbar_settings.help_dropdown:
 		return
-
+  
 	navbar_settings.settings_dropdown = []
 	navbar_settings.help_dropdown = []
 
