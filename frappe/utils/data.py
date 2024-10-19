@@ -2339,7 +2339,7 @@ def add_months_to_date(date, increment):#created
 def get_first_day_of_fiscal_year(date, use_custom_calendar: bool = False, company=None):
 	from erpnext.accounts.utils import get_fiscal_year
 
-	fiscal_year = get_fiscal_year(date, company="TEST")
+	fiscal_year = get_fiscal_year(date, company=company)
 	return fiscal_year and fiscal_year[1] or date
 
 
@@ -2404,7 +2404,7 @@ def get_standard_period_label(date, frequency, company=None):#created
 		label = _(from_date.strftime('%b')) + " " + str(from_date.year) + "-" + _(to_date.strftime('%b')) + " " + str(to_date.year)
 
 	else:
-		fiscal_year = get_fiscal_year(date)
+		fiscal_year = get_fiscal_year(date,company=company)
 
 		if frappe.defaults.get_defaults().calendar_type == 'jalali':
 			fiscal_year = (fiscal_year[0],jdatetime.date.fromgregorian(date=fiscal_year[1]),jdatetime.date.fromgregorian(date=fiscal_year[2]))

@@ -606,6 +606,13 @@ browserslist@^4.0.0, browserslist@^4.21.10, browserslist@^4.21.4:
     node-releases "^2.0.14"
     update-browserslist-db "^1.0.13"
 
+bufferutil@^4.0.8:
+  version "4.0.8"
+  resolved "https://registry.yarnpkg.com/bufferutil/-/bufferutil-4.0.8.tgz#1de6a71092d65d7766c4d8a522b261a6e787e8ea"
+  integrity sha512-4T53u4PdgsXqKaIctwF8ifXlRTTmEPJ8iEPWFdGZvcf7sbwYo6FKFEX9eNNAnzFZ7EzJAQ3CJeOtCRA4rDp7Pw==
+  dependencies:
+    node-gyp-build "^4.3.0"
+
 call-bind@^1.0.0, call-bind@^1.0.2, call-bind@^1.0.4, call-bind@^1.0.5:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/call-bind/-/call-bind-1.0.5.tgz#6fa2b7845ce0ea49bf4d8b9ef64727a2c2e2e513"
@@ -1529,10 +1536,10 @@ frappe-charts@2.0.0-rc22:
   resolved "https://registry.yarnpkg.com/frappe-charts/-/frappe-charts-2.0.0-rc22.tgz#9a5a747febdc381a1d4d7af96e89cf519dfba8c0"
   integrity sha512-N7f/8979wJCKjusOinaUYfMxB80YnfuVLrSkjpj4LtyqS0BGS6SuJxUnb7Jl4RWUFEIs7zEhideIKnyLeFZF4Q==
 
-frappe-datatable@^1.17.2:
-  version "1.17.4"
-  resolved "https://registry.yarnpkg.com/frappe-datatable/-/frappe-datatable-1.17.4.tgz#b003a8097f462fa5933f236590865be0cf370b44"
-  integrity sha512-uqtTzgdYITZM8hDvTEnmYnYRmPsoG+AjbTDls/NMxMBCkzRAE0VTVaPs5yag7HWoYJg/9LFW+sHwgZbVpjyBEA==
+frappe-datatable@1.17.16:
+  version "1.17.16"
+  resolved "https://registry.yarnpkg.com/frappe-datatable/-/frappe-datatable-1.17.16.tgz#4e7bf3b50dad5bc048f95ccd7ca7da91e04844ab"
+  integrity sha512-BJgWFX8msHZcS1mw2xbuaY1YdH1dBXUIuREVmqH5z1p78GusPaDV8sbWskTS5yVBUklMrMq2VfBTUsJXjvl+wg==
   dependencies:
     hyperlist "^1.0.0-beta"
     lodash "^4.17.5"
@@ -2340,6 +2347,11 @@ negotiator@0.6.3:
   version "0.6.3"
   resolved "https://registry.yarnpkg.com/negotiator/-/negotiator-0.6.3.tgz#58e323a72fedc0d6f9cd4d31fe49f51479590ccd"
   integrity sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==
+
+node-gyp-build@^4.3.0:
+  version "4.8.2"
+  resolved "https://registry.yarnpkg.com/node-gyp-build/-/node-gyp-build-4.8.2.tgz#4f802b71c1ab2ca16af830e6c1ea7dd1ad9496fa"
+  integrity sha512-IRUxE4BVsHWXkV/SFOut4qTlagw2aM8T5/vnTsmrHJvVoKueJHRc/JaFND7QDDc61kLYUJ6qlZM3sqTSyx2dTw==
 
 node-releases@^2.0.14:
   version "2.0.14"
