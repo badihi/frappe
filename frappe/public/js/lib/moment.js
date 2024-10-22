@@ -3,3 +3,4 @@
 // that depend on `moment`.
 import momentTimezone from "moment-timezone/builds/moment-timezone-with-data-10-year-range.min.js";
 window.moment = momentTimezone;
+window.moment.loadPersian({dialect: 'persian-modern'});

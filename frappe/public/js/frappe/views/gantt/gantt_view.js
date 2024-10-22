@@ -94,7 +94,8 @@ frappe.views.GanttView = class GanttView extends frappe.views.ListView {
 
 		this.$result.empty();
 		this.$result.addClass("gantt-modern");
-
+		
+		moment.loadPersian({dialect: 'persian-modern'});
 		this.gantt = new Gantt(this.$result[0], this.tasks, {
 			bar_height: 35,
 			bar_corner_radius: 4,
@@ -104,6 +105,22 @@ frappe.views.GanttView = class GanttView extends frappe.views.ListView {
 			resize_handle_offset: 4,
 			view_mode: gantt_view_mode,
 			date_format: "YYYY-MM-DD",
+			rtl: frappe.utils.is_rtl(),
+			auto_move_label: false,
+			upper_text(date, mode, def, index) {
+				date = moment(date);
+				if (mode === 'Day') {
+					return date.format(frappe.datetime.fixDateFormatForCalendar('D')) === '1' || index === 0
+						? date.format(frappe.datetime.fixDateFormatForCalendar('MMMM'))
+						: '';
+				}
+			},
+			lower_text(date, mode, def, index) {
+				date = moment(date);
+				if (mode === 'Day') {
+					return date.format(frappe.datetime.fixDateFormatForCalendar('D'));
+				}
+			},
 			on_click: (task) => {
 				frappe.set_route("Form", task.doctype, task.id);
 			},
@@ -225,8 +242,8 @@ frappe.views.GanttView = class GanttView extends frappe.views.ListView {
 
 	get required_libs() {
 		return [
-			"assets/frappe/node_modules/frappe-gantt/dist/frappe-gantt.css",
-			"assets/frappe/node_modules/frappe-gantt/dist/frappe-gantt.min.js",
+			"assets/frappe/node_modules/@charchoob/frappe-gantt/dist/frappe-gantt.css",
+			"assets/frappe/node_modules/@charchoob/frappe-gantt/dist/frappe-gantt.umd.js",
 		];
 	}
 };

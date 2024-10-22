@@ -187,6 +187,7 @@ $.extend(frappe.datetime, {
 					.replace(/(\W|^)MM(\W|$)/, '$1jMM$2')
 					.replace(/(\W|^)DD(\W|$)/, '$1jDD$2')
 					.replace(/(\W|^)D(\W|$)/, '$1jD$2')
+					.replace(/(\W|^)MMMM(\W|$)/, '$1jMMMM$2')
 					.replace(/(\W|^)M(\W|$)/, '$1jM$2')
 					.replace(/(\W|^)YY(\W|$)/, '$1jYY$2');
 			default:

@@ -31,6 +31,11 @@
     "@babel/helper-validator-identifier" "^7.22.20"
     to-fast-properties "^2.0.0"
 
+"@charchoob/frappe-gantt@0.8.5":
+  version "0.8.5"
+  resolved "https://git.charchooberp.ir/api/packages/ahmad/npm/%40charchoob%2Ffrappe-gantt/-/0.8.5/frappe-gantt-0.8.5.tgz#da5b7eb3be6ad0d75871f613b0b75db07892c51c"
+  integrity sha512-MSAtHCyIEA26V+1xmALRWJ9MaDpN8kqj7QJ7J5Aqlj3UMRXx3RBAZFa/ByfcP82qo4ceqaiUYDv/sGonpsu8Qw==
+
 "@codexteam/icons@0.1.0":
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/@codexteam/icons/-/icons-0.1.0.tgz#a02885fe8699f69902d05b077b5f1cd48a2ca6b9"
@@ -1544,11 +1549,6 @@ frappe-datatable@1.17.16:
     hyperlist "^1.0.0-beta"
     lodash "^4.17.5"
     sortablejs "^1.7.0"
-
-frappe-gantt@^0.6.0:
-  version "0.6.1"
-  resolved "https://registry.yarnpkg.com/frappe-gantt/-/frappe-gantt-0.6.1.tgz#57ae0b5f024101fc7cd5ba92f605de97dba9c9a1"
-  integrity sha512-1cSU9vLbwypjzaxnCfnEE03Xr3HlAV2S8dRtjxw62o+amkx1A8bBIFd2jp84mcDdTCM77Ij4LzZBslAKZB8oMg==
 
 fs-exists-sync@^0.1.0:
   version "0.1.0"
