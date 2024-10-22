@@ -57,7 +57,7 @@ frappe.views.GanttView = class GanttView extends frappe.views.ListView {
 			}
 
 			var r = {
-				start: item[field_map.start] || moment().format('YYYY-MM-DD'),
+				start: item[field_map.start] || item[field_map.end] || moment().format('YYYY-MM-DD'),
 				end: item[field_map.end] || moment().format('YYYY-MM-DD'),
 				name: label,
 				id: item[field_map.id || "name"],
