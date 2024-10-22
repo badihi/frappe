@@ -100,7 +100,7 @@ html[dir=rtl] .prev-doc svg, html[dir=rtl] .next-doc svg {
 }
 
 .page-head {
-	z-index: 6;
+	z-index: 12;
 	position: sticky;
 	top: var(--navbar-height);
 	background: var(--bg-color);
