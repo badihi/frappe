@@ -28,10 +28,11 @@
 	.kanban-column {
 		@include transition();
 
-		flex: 1 0 260px;
+		flex: 1 0 290px;
 		border-radius: var(--border-radius);
 		padding: var(--padding-md);
 		min-height: calc(100vh - 150px);
+		width: 290px;
 
 		.add-card {
 			@include flex(flex, center, center, null);
