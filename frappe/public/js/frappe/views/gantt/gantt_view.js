@@ -37,7 +37,7 @@ frappe.views.GanttView = class GanttView extends frappe.views.ListView {
 		var meta = this.meta;
 		var field_map = this.calendar_settings.field_map;
 
-		this.tasks = this.data.filter(item => item[field_map.start] && item[field_map.end]).map(function (item) {
+		this.tasks = this.data.map(function (item) {
 			// set progress
 			var progress = 0;
 			if (field_map.progress && $.isFunction(field_map.progress)) {
@@ -57,8 +57,8 @@ frappe.views.GanttView = class GanttView extends frappe.views.ListView {
 			}
 
 			var r = {
-				start: item[field_map.start],
-				end: item[field_map.end],
+				start: item[field_map.start] || moment().format('YYYY-MM-DD'),
+				end: item[field_map.end] || moment().format('YYYY-MM-DD'),
 				name: label,
 				id: item[field_map.id || "name"],
 				doctype: me.doctype,
