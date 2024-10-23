@@ -95,7 +95,9 @@ frappe.views.GanttView = class GanttView extends frappe.views.ListView {
 		this.$result.empty();
 		this.$result.addClass("gantt-modern");
 		
-		moment.loadPersian({dialect: 'persian-modern'});
+		if (frappe.boot.user.defaults.language === 'fa') {
+			moment.loadPersian({ dialect: 'persian-modern'});
+		}
 		this.gantt = new Gantt(this.$result[0], this.tasks, {
 			bar_height: 35,
 			bar_corner_radius: 4,
