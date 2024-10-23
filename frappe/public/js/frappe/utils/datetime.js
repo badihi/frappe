@@ -95,7 +95,14 @@ $.extend(frappe.datetime, {
 	},
 
 	add_months: function (d, months) {
-		return moment(d).add(months, "months").format();
+		if (frappe.boot.user.defaults.calendar_type === 'jalali') {
+			monthformat='jmonths'
+				
+		} else {
+			monthformat='months'
+		}
+		return moment(d).add(months, monthformat).format();
+		
 	},
 
 	week_start: function () {
@@ -189,7 +196,9 @@ $.extend(frappe.datetime, {
 					.replace(/(\W|^)D(\W|$)/, '$1jD$2')
 					.replace(/(\W|^)MMMM(\W|$)/, '$1jMMMM$2')
 					.replace(/(\W|^)M(\W|$)/, '$1jM$2')
-					.replace(/(\W|^)YY(\W|$)/, '$1jYY$2');
+					.replace(/(\W|^)YY(\W|$)/, '$1jYY$2')
+					.replace(/(\W|^)Do(\W|$)/, '$1jDo$2')
+					.replace(/(\W|^)MMMM(\W|$)/, '$1jMMMM$2');
 			default:
 				return format;
 		}
@@ -219,12 +228,26 @@ $.extend(frappe.datetime, {
 		return frappe.datetime.str_to_obj(frappe.datetime.user_to_str(d));
 	},
 
-	global_date_format: function (d) {
+	global_date_format: function (d, use_custom_calendar=false) {
+		if (use_custom_calendar && frappe.boot.user.defaults.language === 'fa') {
+			moment.loadPersian({ dialect: 'persian-modern', usePersianDigits: true });
+		}
 		var m = moment(d);
 		if (m._f && m._f.indexOf("HH") !== -1) {
-			return m.format("Do MMMM YYYY, hh:mm A");
+			if (use_custom_calendar) {
+				return m.format(this.fixDateFormatForCalendar("Do MMMM YYYY, hh:mm A"));
+
+			} else {
+				return m.format("Do MMMM YYYY, hh:mm A");
+			}
 		} else {
-			return m.format("Do MMMM YYYY");
+			if (use_custom_calendar) {
+				return m.format(this.fixDateFormatForCalendar("Do MMMM YYYY"));
+
+			} else {
+				return m.format("Do MMMM YYYY");
+			}
+			
 		}
 	},
 
