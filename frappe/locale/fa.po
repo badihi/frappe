@@ -1035,11 +1035,6 @@ msgstr "گزارش فعالیت"
 msgid "Add"
 msgstr "افزودن"
 
-#: frappe/public/js/frappe/list/list_view.js:266
-msgctxt "Primary action in list view"
-msgid "Add"
-msgstr "افزودن"
-
 #: frappe/public/js/frappe/form/grid_row.js:430
 msgid "Add / Remove Columns"
 msgstr "افزودن / حذف ستون‌ها"
@@ -1184,11 +1179,6 @@ msgstr "اضافه کردن مشترکین"
 #: frappe/public/js/frappe/list/bulk_operations.js:425
 msgid "Add Tags"
 msgstr "افزودن برچسب‌ها"
-
-#: frappe/public/js/frappe/list/list_view.js:1895
-msgctxt "Button in list view actions menu"
-msgid "Add Tags"
-msgstr "افزودن برچسب"
 
 #: frappe/public/js/frappe/views/communication.js:418
 msgid "Add Template"
@@ -2378,11 +2368,6 @@ msgstr "اختصاص شرط"
 #: frappe/public/js/frappe/form/sidebar/assign_to.js:189
 msgid "Assign To"
 msgstr "اختصاص به"
-
-#: frappe/public/js/frappe/list/list_view.js:1841
-msgctxt "Button in list view actions menu"
-msgid "Assign To"
-msgstr "اختصاص دادن به"
 
 #: frappe/public/js/frappe/form/sidebar/assign_to.js:180
 msgid "Assign To User Group"
@@ -3897,16 +3882,6 @@ msgstr "نمی‌توان {0} را به {1} تغییر نام داد زیرا {0
 msgid "Cancel"
 msgstr "لغو کردن"
 
-#: frappe/public/js/frappe/list/list_view.js:1950
-msgctxt "Button in list view actions menu"
-msgid "Cancel"
-msgstr "لغو"
-
-#: frappe/public/js/frappe/ui/messages.js:68
-msgctxt "Secondary button in warning dialog"
-msgid "Cancel"
-msgstr "لغو"
-
 #: frappe/public/js/frappe/form/form.js:956
 msgid "Cancel All"
 msgstr "لغو همه"
@@ -4248,11 +4223,6 @@ msgstr "هش چینی"
 
 #: frappe/public/js/frappe/form/templates/form_sidebar.html:11
 #: frappe/tests/test_translate.py:98
-msgid "Change"
-msgstr "تغییر دادن"
-
-#: frappe/tests/test_translate.py:99
-msgctxt "Coins"
 msgid "Change"
 msgstr "تغییر دادن"
 
@@ -4745,11 +4715,6 @@ msgstr "روش چالش کد"
 msgid "Collapse"
 msgstr "جمع کردن"
 
-#: frappe/public/js/frappe/form/controls/code.js:179
-msgctxt "Shrink code field."
-msgid "Collapse"
-msgstr "جمع شدن"
-
 #: frappe/public/js/frappe/views/reports/query_report.js:1966
 #: frappe/public/js/frappe/views/treeview.js:110
 msgid "Collapse All"
@@ -5171,11 +5136,6 @@ msgstr ""
 
 #: frappe/core/doctype/user/user.js:395 frappe/public/js/frappe/dom.js:331
 #: frappe/www/update-password.html:30
-msgid "Confirm"
-msgstr "تایید"
-
-#: frappe/public/js/frappe/ui/messages.js:31
-msgctxt "Title of confirmation dialog"
 msgid "Confirm"
 msgstr "تایید"
 
@@ -5613,11 +5573,6 @@ msgstr "ورود به سیستم"
 #: frappe/workflow/page/workflow_builder/workflow_builder.js:41
 msgid "Create New"
 msgstr "ثبت جدید"
-
-#: frappe/public/js/frappe/list/list_view.js:486
-msgctxt "Create a new document from list view"
-msgid "Create New"
-msgstr "ایجاد جدید"
 
 #: frappe/core/doctype/doctype/doctype_list.js:83
 msgid "Create New DocType"
@@ -6073,11 +6028,6 @@ msgstr "سفارشی سازی برای <b>{0}</b> به: <br> {1}"
 #: frappe/public/js/frappe/views/dashboard/dashboard_view.js:196
 msgid "Customize"
 msgstr "سفارشی‌سازی"
-
-#: frappe/public/js/frappe/list/list_view.js:1701
-msgctxt "Button in list view menu"
-msgid "Customize"
-msgstr "شخصی سازی"
 
 #: frappe/custom/doctype/customize_form/customize_form.js:89
 msgid "Customize Child Table"
@@ -6714,11 +6664,6 @@ msgstr "به تاخیر افتاده"
 msgid "Delete"
 msgstr "حذف کردن"
 
-#: frappe/public/js/frappe/list/list_view.js:1918
-msgctxt "Button in list view actions menu"
-msgid "Delete"
-msgstr "حذف"
-
 #: frappe/www/me.html:75
 msgid "Delete Account"
 msgstr "حذف حساب کاربری"
@@ -7172,11 +7117,6 @@ msgstr "پاسخ خودکار غیرفعال است"
 msgid "Discard"
 msgstr "نادیده گرفتن"
 
-#: frappe/website/doctype/web_form/templates/web_form.html:41
-msgctxt "Button in web form"
-msgid "Discard"
-msgstr "دور انداختن"
-
 #: frappe/public/js/frappe/web_form/web_form.js:184
 msgid "Discard?"
 msgstr "دور انداختن؟"
@@ -7201,11 +7141,6 @@ msgstr "موضوع بحث"
 #: frappe/templates/discussions/reply_section.html:29
 msgid "Dismiss"
 msgstr "رد کردن"
-
-#: frappe/public/js/frappe/widgets/onboarding_widget.js:577
-msgctxt "Stop showing the onboarding widget."
-msgid "Dismiss"
-msgstr "رد"
 
 #. Label of a Section Break field in DocType 'DocField'
 #. Label of a Section Break field in DocType 'Customize Form Field'
@@ -7864,11 +7799,6 @@ msgstr ""
 msgid "Download"
 msgstr "دانلود"
 
-#: frappe/public/js/frappe/views/reports/report_utils.js:229
-msgctxt "Export report"
-msgid "Download"
-msgstr "دانلود"
-
 #. Label of a Link in the Tools Workspace
 #: frappe/automation/workspace/tools/tools.json
 #: frappe/desk/page/backups/backups.js:4
@@ -8120,21 +8050,6 @@ msgstr ""
 msgid "Edit"
 msgstr "ویرایش کنید"
 
-#: frappe/public/js/frappe/list/list_view.js:2004
-msgctxt "Button in list view actions menu"
-msgid "Edit"
-msgstr "ویرایش"
-
-#: frappe/website/doctype/web_form/templates/web_form.html:20
-msgctxt "Button in web form"
-msgid "Edit"
-msgstr "ویرایش"
-
-#: frappe/public/js/frappe/form/grid_row.js:337
-msgctxt "Edit grid row"
-msgid "Edit"
-msgstr "ویرایش"
-
 #: frappe/templates/emails/auto_email_report.html:63
 msgid "Edit Auto Email Report Settings"
 msgstr "ویرایش خودکار تنظیمات گزارش ایمیل"
@@ -8146,11 +8061,6 @@ msgstr "ویرایش سفارشی HTML"
 #: frappe/public/js/frappe/form/toolbar.js:534
 msgid "Edit DocType"
 msgstr "ویرایش DOCTYPE"
-
-#: frappe/public/js/frappe/list/list_view.js:1728
-msgctxt "Button in list view menu"
-msgid "Edit DocType"
-msgstr "ویرایش DocType"
 
 #: frappe/printing/page/print_format_builder_beta/print_format_builder_beta.js:42
 #: frappe/workflow/page/workflow_builder/workflow_builder.js:42
@@ -9015,11 +8925,6 @@ msgstr "برابر"
 msgid "Error"
 msgstr "خطا"
 
-#: frappe/public/js/frappe/web_form/web_form.js:240
-msgctxt "Title of error message in web form"
-msgid "Error"
-msgstr "خطا"
-
 #: frappe/www/error.html:34
 msgid "Error Code: {0}"
 msgstr "کد خطا: {0}"
@@ -9253,11 +9158,6 @@ msgstr "اجرایی"
 msgid "Expand"
 msgstr "گسترش دادن"
 
-#: frappe/public/js/frappe/form/controls/code.js:180
-msgctxt "Enlarge code field."
-msgid "Expand"
-msgstr "بسط دادن"
-
 #: frappe/public/js/frappe/views/reports/query_report.js:1966
 #: frappe/public/js/frappe/views/treeview.js:114
 msgid "Expand All"
@@ -9317,11 +9217,6 @@ msgstr "زمان انقضای کد QR صفحه کد"
 #: frappe/public/js/frappe/views/reports/report_view.js:1551
 msgid "Export"
 msgstr "برون‌ریزی"
-
-#: frappe/public/js/frappe/list/list_view.js:2026
-msgctxt "Button in list view actions menu"
-msgid "Export"
-msgstr "برون‌بُرد"
 
 #: frappe/public/js/frappe/data_import/data_exporter.js:245
 msgid "Export 1 record"
@@ -11741,12 +11636,6 @@ msgstr ""
 msgid "ID"
 msgstr "شناسه"
 
-#: frappe/desk/reportview.py:455
-#: frappe/public/js/frappe/views/reports/report_view.js:918
-msgctxt "Label of name column in report"
-msgid "ID"
-msgstr "شناسه"
-
 #: frappe/public/js/print_format_builder/PrintFormatControls.vue:199
 msgid "ID (name)"
 msgstr "شناسه (نام)"
@@ -12178,11 +12067,6 @@ msgstr "ضمنی"
 #: frappe/email/doctype/email_group/email_group.js:31
 msgid "Import"
 msgstr "درون‌ریزی"
-
-#: frappe/public/js/frappe/list/list_view.js:1665
-msgctxt "Button in list view menu"
-msgid "Import"
-msgstr "درون‌بُرد"
 
 #. Label of a Link in the Tools Workspace
 #. Label of a shortcut in the Tools Workspace
@@ -13880,12 +13764,6 @@ msgstr "دفتر کل"
 msgid "Left"
 msgstr "چپ"
 
-#: frappe/printing/page/print_format_builder/print_format_builder.js:483
-#: frappe/public/js/print_format_builder/PrintFormatControls.vue:155
-msgctxt "alignment"
-msgid "Left"
-msgstr "ترک کرد"
-
 #. Option for the 'Position' (Select) field in DocType 'Form Tour Step'
 #: frappe/desk/doctype/form_tour_step/form_tour_step.json
 msgid "Left Bottom"
@@ -14310,11 +14188,6 @@ msgstr "پیام تنظیم لیست"
 #: frappe/core/doctype/role/role.json
 #: frappe/custom/doctype/customize_form/customize_form.json
 #: frappe/website/doctype/web_form/web_form.json
-msgid "List Settings"
-msgstr "تنظیمات لیست"
-
-#: frappe/public/js/frappe/list/list_view.js:1745
-msgctxt "Button in list view menu"
 msgid "List Settings"
 msgstr "تنظیمات لیست"
 
@@ -15064,11 +14937,6 @@ msgstr "ادغام بین تنها گروه به گروه و یا برگ گره 
 #: frappe/public/js/frappe/views/communication.js:114
 #: frappe/workflow/doctype/workflow_document_state/workflow_document_state.json
 #: frappe/www/message.html:3 frappe/www/message.html:25
-msgid "Message"
-msgstr "پیام"
-
-#: frappe/__init__.py:589 frappe/public/js/frappe/ui/messages.js:267
-msgctxt "Default title of the message dialog"
 msgid "Message"
 msgstr "پیام"
 
@@ -16084,11 +15952,6 @@ msgstr "خبرنامه"
 msgid "Next"
 msgstr "بعد"
 
-#: frappe/public/js/frappe/ui/slides.js:359
-msgctxt "Go to next slide"
-msgid "Next"
-msgstr "بعدی"
-
 #. Label of a Link field in DocType 'Workflow Document State'
 #: frappe/workflow/doctype/workflow_document_state/workflow_document_state.json
 msgid "Next Action Email Template"
@@ -16164,16 +16027,6 @@ msgstr "بعد روی کلیک کنید"
 #: frappe/website/doctype/help_article/templates/help_article.html:26
 msgid "No"
 msgstr "نه"
-
-#: frappe/public/js/frappe/ui/filters/filter.js:506
-msgctxt "Checkbox is not checked"
-msgid "No"
-msgstr "خیر"
-
-#: frappe/public/js/frappe/ui/messages.js:37
-msgctxt "Dismiss confirmation dialog"
-msgid "No"
-msgstr "خیر"
 
 #: frappe/www/third_party_apps.html:54
 msgid "No Active Sessions"
@@ -16642,11 +16495,6 @@ msgid "Not Sent"
 msgstr "ارسال نشد"
 
 #: frappe/public/js/frappe/list/list_sidebar_group_by.js:219
-msgid "Not Set"
-msgstr "تنظیم نشده"
-
-#: frappe/public/js/frappe/ui/filters/filter.js:568
-msgctxt "Field value is not set"
 msgid "Not Set"
 msgstr "تنظیم نشده"
 
@@ -17326,11 +17174,6 @@ msgstr "اوه! چیزی اشتباه شد."
 #: frappe/core/doctype/deleted_document/deleted_document.js:7
 #: frappe/desk/doctype/event/event.json frappe/desk/doctype/todo/todo.json
 #: frappe/workflow/doctype/workflow_action/workflow_action.json
-msgid "Open"
-msgstr "باز"
-
-#: frappe/desk/doctype/todo/todo_list.js:14
-msgctxt "Access"
 msgid "Open"
 msgstr "باز"
 
@@ -18273,11 +18116,6 @@ msgstr "نقش های مجاز"
 msgid "Personal"
 msgstr "شخصی"
 
-#: frappe/public/js/frappe/views/workspace/workspace.js:34
-msgctxt "Workspace Category"
-msgid "Personal"
-msgstr "شخصی"
-
 #. Name of a DocType
 #: frappe/website/doctype/personal_data_deletion_request/personal_data_deletion_request.json
 msgid "Personal Data Deletion Request"
@@ -18994,11 +18832,6 @@ msgstr "پیش نمایش:"
 msgid "Previous"
 msgstr "قبلی"
 
-#: frappe/public/js/frappe/ui/slides.js:351
-msgctxt "Go to previous slide"
-msgid "Previous"
-msgstr "قبلی"
-
 #: frappe/public/js/frappe/form/toolbar.js:290
 msgid "Previous Document"
 msgstr "سند قبلی"
@@ -19058,11 +18891,6 @@ msgstr "تلفن اصلی"
 #: frappe/public/js/frappe/views/reports/query_report.js:1642
 #: frappe/public/js/frappe/views/reports/report_view.js:1461
 #: frappe/public/js/frappe/views/treeview.js:456 frappe/www/printview.html:18
-msgid "Print"
-msgstr "چاپ"
-
-#: frappe/public/js/frappe/list/list_view.js:1910
-msgctxt "Button in list view actions menu"
 msgid "Print"
 msgstr "چاپ"
 
@@ -19395,11 +19223,6 @@ msgstr "نام ارائه دهنده"
 #: frappe/public/js/frappe/views/workspace/workspace.js:658
 #: frappe/public/js/frappe/views/workspace/workspace.js:986
 #: frappe/public/js/frappe/views/workspace/workspace.js:1232
-msgid "Public"
-msgstr "عمومی"
-
-#: frappe/public/js/frappe/views/workspace/workspace.js:35
-msgctxt "Workspace Category"
 msgid "Public"
 msgstr "عمومی"
 
@@ -21117,12 +20940,6 @@ msgstr "متن دارای قالب‌بندی"
 msgid "Right"
 msgstr "راست"
 
-#: frappe/printing/page/print_format_builder/print_format_builder.js:484
-#: frappe/public/js/print_format_builder/PrintFormatControls.vue:156
-msgctxt "alignment"
-msgid "Right"
-msgstr "درست"
-
 #. Option for the 'Position' (Select) field in DocType 'Form Tour Step'
 #: frappe/desk/doctype/form_tour_step/form_tour_step.json
 msgid "Right Bottom"
@@ -21204,11 +21021,6 @@ msgstr "مجوز های نقش"
 #: frappe/core/workspace/users/users.json
 msgid "Role Permissions Manager"
 msgstr "مدیریت دسترسی نقش‌ها"
-
-#: frappe/public/js/frappe/list/list_view.js:1687
-msgctxt "Button in list view menu"
-msgid "Role Permissions Manager"
-msgstr "مدیر مجوزهای نقش"
 
 #. Name of a DocType
 #. Label of a Link field in DocType 'User'
@@ -21687,11 +21499,6 @@ msgstr "ذخیره"
 #: frappe/public/js/frappe/views/workspace/workspace.js:544
 msgid "Saving"
 msgstr "ذخیره سازی"
-
-#: frappe/public/js/frappe/form/save.js:9
-msgctxt "Freeze message while saving a document"
-msgid "Saving"
-msgstr "ذخیره در"
 
 #: frappe/custom/doctype/customize_form/customize_form.js:411
 msgid "Saving Customization..."
@@ -24221,31 +24028,6 @@ msgstr "صف ارسال"
 msgid "Submit"
 msgstr "ثبت"
 
-#: frappe/public/js/frappe/list/list_view.js:1977
-msgctxt "Button in list view actions menu"
-msgid "Submit"
-msgstr "ارسال"
-
-#: frappe/website/doctype/web_form/templates/web_form.html:44
-msgctxt "Button in web form"
-msgid "Submit"
-msgstr "ارسال"
-
-#: frappe/public/js/frappe/ui/dialog.js:60
-msgctxt "Primary action in dialog"
-msgid "Submit"
-msgstr "ارسال"
-
-#: frappe/public/js/frappe/ui/messages.js:97
-msgctxt "Primary action of prompt dialog"
-msgid "Submit"
-msgstr "ارسال"
-
-#: frappe/public/js/frappe/desk.js:212
-msgctxt "Submit password for Email Account"
-msgid "Submit"
-msgstr "ارسال"
-
 #. Label of a Check field in DocType 'Data Import'
 #: frappe/core/doctype/data_import/data_import.json
 msgid "Submit After Import"
@@ -26092,11 +25874,6 @@ msgstr ""
 msgid "Toggle Sidebar"
 msgstr "نوار کناری را تغییر دهید"
 
-#: frappe/public/js/frappe/list/list_view.js:1718
-msgctxt "Button in list view menu"
-msgid "Toggle Sidebar"
-msgstr "تغییر وضعیت نوار کناری"
-
 #. Label of a standard navbar item
 #. Type: Action
 #: frappe/hooks.py
@@ -26938,11 +26715,6 @@ msgstr "به روز رسانی‌ها"
 msgid "Updating"
 msgstr "به روز رسانی"
 
-#: frappe/public/js/frappe/form/save.js:11
-msgctxt "Freeze message while updating a document"
-msgid "Updating"
-msgstr "در حال بروز رسانی"
-
 #: frappe/email/doctype/email_queue/email_queue.py:432
 msgid "Updating Email Queue Statuses. The emails will be picked up in the next scheduled run."
 msgstr "به روزرسانی وضعیت صف ایمیل. ایمیل‌ها در دور بعدی برنامه‌ریزی شده انتخاب خواهند"
@@ -27311,11 +27083,6 @@ msgstr "مجوز کاربر"
 #: frappe/public/js/frappe/views/reports/report_view.js:1675
 msgid "User Permissions"
 msgstr "مجوز کاربر"
-
-#: frappe/public/js/frappe/list/list_view.js:1676
-msgctxt "Button in list view menu"
-msgid "User Permissions"
-msgstr "مجوزهای کاربر"
 
 #: frappe/core/page/permission_manager/permission_manager_help.html:32
 msgid "User Permissions are used to limit users to specific records."
@@ -28689,16 +28456,6 @@ msgstr "رنگ زرد"
 #: frappe/public/js/frappe/list/list_sidebar_group_by.js:223
 #: frappe/public/js/frappe/views/reports/query_report.js:1529
 #: frappe/website/doctype/help_article/templates/help_article.html:25
-msgid "Yes"
-msgstr "بله"
-
-#: frappe/public/js/frappe/ui/messages.js:32
-msgctxt "Approve confirmation dialog"
-msgid "Yes"
-msgstr "بله"
-
-#: frappe/public/js/frappe/ui/filters/filter.js:505
-msgctxt "Checkbox is checked"
 msgid "Yes"
 msgstr "بله"
 
