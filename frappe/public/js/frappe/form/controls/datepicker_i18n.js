@@ -1,19 +1,19 @@
-import "air-datepicker/dist/js/i18n/datepicker.cs.js";
-import "air-datepicker/dist/js/i18n/datepicker.da.js";
-import "air-datepicker/dist/js/i18n/datepicker.de.js";
-import "air-datepicker/dist/js/i18n/datepicker.en.js";
-import "air-datepicker/dist/js/i18n/datepicker.fa.js";
-import "air-datepicker/dist/js/i18n/datepicker.es.js";
-import "air-datepicker/dist/js/i18n/datepicker.fi.js";
-import "air-datepicker/dist/js/i18n/datepicker.fr.js";
-import "air-datepicker/dist/js/i18n/datepicker.hu.js";
-import "air-datepicker/dist/js/i18n/datepicker.nl.js";
-import "air-datepicker/dist/js/i18n/datepicker.pl.js";
-import "air-datepicker/dist/js/i18n/datepicker.pt-BR.js";
-import "air-datepicker/dist/js/i18n/datepicker.pt.js";
-import "air-datepicker/dist/js/i18n/datepicker.ro.js";
-import "air-datepicker/dist/js/i18n/datepicker.sk.js";
-import "air-datepicker/dist/js/i18n/datepicker.zh.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.cs.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.da.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.de.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.en.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.fa.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.es.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.fi.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.fr.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.hu.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.nl.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.pl.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.pt-BR.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.pt.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.ro.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.sk.js";
+import "@charchoob/air-datepicker/dist/js/i18n/datepicker.zh.js";
 
 (function ($) {
 	$.fn.datepicker.language["ar"] = {
