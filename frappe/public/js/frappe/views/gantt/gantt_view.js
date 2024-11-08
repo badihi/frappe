@@ -109,6 +109,7 @@ frappe.views.GanttView = class GanttView extends frappe.views.ListView {
 			date_format: "YYYY-MM-DD",
 			rtl: frappe.utils.is_rtl(),
 			auto_move_label: false,
+			scroll_to: 'today',
 			upper_text(date, mode, def, index) {
 				date = moment(date);
 				if (mode === 'Day') {

@@ -31,10 +31,10 @@
     "@babel/helper-validator-identifier" "^7.22.20"
     to-fast-properties "^2.0.0"
 
-"@charchoob/frappe-gantt@0.8.5":
-  version "0.8.5"
-  resolved "https://git.charchooberp.ir/api/packages/ahmad/npm/%40charchoob%2Ffrappe-gantt/-/0.8.5/frappe-gantt-0.8.5.tgz#da5b7eb3be6ad0d75871f613b0b75db07892c51c"
-  integrity sha512-MSAtHCyIEA26V+1xmALRWJ9MaDpN8kqj7QJ7J5Aqlj3UMRXx3RBAZFa/ByfcP82qo4ceqaiUYDv/sGonpsu8Qw==
+"@charchoob/frappe-gantt@0.8.6":
+  version "0.8.6"
+  resolved "https://git.charchooberp.ir/api/packages/ahmad/npm/%40charchoob%2Ffrappe-gantt/-/0.8.6/frappe-gantt-0.8.6.tgz#3c3395ab8b31e7646b115b48488ae2b8fbba62d6"
+  integrity sha512-TBrHsKSdaAnP3YUXL3ShyviR+SRSfjWj1cE19tRlZSpGcxn88PWF89LT4Nj+cn7sdStcEf09cW/vKbBWy+OL0g==
 
 "@codexteam/icons@0.1.0":
   version "0.1.0"
