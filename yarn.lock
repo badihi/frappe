@@ -31,6 +31,13 @@
     "@babel/helper-validator-identifier" "^7.22.20"
     to-fast-properties "^2.0.0"
 
+"@charchoob/air-datepicker@2.2.4":
+  version "2.2.4"
+  resolved "https://git.charchooberp.ir/api/packages/ahmad/npm/%40charchoob%2Fair-datepicker/-/2.2.4/air-datepicker-2.2.4.tgz#4b89acab08e944d65ee990b87be809e6c858b47f"
+  integrity sha512-F8/BKTYa7nuvLLE1nlerD+bCrBlC6rU5BNSgks3KBV2Q4rALcY29Cm3NwQH5IQWWuVepIXY0Ggr/iMeInb/VrA==
+  dependencies:
+    jquery ">=2.0.0 <4.0.0"
+
 "@charchoob/frappe-gantt@0.8.6":
   version "0.8.6"
   resolved "https://git.charchooberp.ir/api/packages/ahmad/npm/%40charchoob%2Ffrappe-gantt/-/0.8.6/frappe-gantt-0.8.6.tgz#3c3395ab8b31e7646b115b48488ae2b8fbba62d6"
@@ -445,12 +452,6 @@ acorn@^7.1.1:
   version "7.4.1"
   resolved "https://registry.yarnpkg.com/acorn/-/acorn-7.4.1.tgz#feaed255973d2e77555b83dbc08851a6c63520fa"
   integrity sha512-nQyp0o1/mNdbTO1PO6kHkwSrmgZ0MT/jCCpNiwbUjGoRN4dlBhqJtoQuCnEOKzgTVwg0ZWiCoQy6SxMebQVh8A==
-
-"air-datepicker@github:badihi/air-datepicker#b425178600f11779fdd66bdd8421e785d491b8b9":
-  version "2.2.3"
-  resolved "https://codeload.github.com/badihi/air-datepicker/tar.gz/b425178600f11779fdd66bdd8421e785d491b8b9"
-  dependencies:
-    jquery ">=2.0.0 <4.0.0"
 
 ansi-regex@^2.0.0:
   version "2.1.1"
