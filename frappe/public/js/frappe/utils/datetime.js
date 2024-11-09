@@ -219,7 +219,7 @@ $.extend(frappe.datetime, {
 		}
 
 		// user_fmt.replace("YYYY", "YY")? user might only input 2 digits of the year, which should also be parsed
-		return moment(val, [user_fmt, user_fmt.replace("YYYY", "YY")])
+		return moment(val, [user_fmt, user_fmt.replace("YYYY", "YY"), system_fmt, system_fmt.replace("YYYY", "YY")])
 			.locale("en")
 			.format(system_fmt);
 	},
