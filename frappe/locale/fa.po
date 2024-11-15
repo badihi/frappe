@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: frappe\n"
 "Report-Msgid-Bugs-To: developers@frappe.io\n"
 "POT-Creation-Date: 2024-09-24 15:33+0000\n"
-"PO-Revision-Date: 2024-11-15 10:36+0000\n"
+"PO-Revision-Date: 2024-11-15 10:49+0000\n"
 "Last-Translator: Weblate Admin <a.samadani110@gmail.com>\n"
 "Language-Team: Persian <http://translate.charchooberp.ir/projects/"
 "charchooberp/frappe-translation/fa/>\n"
@@ -6047,7 +6047,7 @@ msgstr "شخصی‌سازی داشبورد"
 #: frappe/custom/doctype/customize_form/customize_form.json
 #: frappe/public/js/frappe/views/kanban/kanban_view.js:343
 msgid "Customize Form"
-msgstr "شخصی‌سازی فرم"
+msgstr "شخصی‌سازی فرم های من"
 
 #: frappe/custom/doctype/customize_form/customize_form.js:100
 msgid "Customize Form - {0}"
